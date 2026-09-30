@@ -1,0 +1,1236 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+  <title>THE ROOMS</title>
+  
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/lucide@latest"></script>
+
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Creepster&family=Noto+Sans+KR:wght@400;700;900&display=swap');
+
+    * {
+      user-select: none;
+      -webkit-user-select: none;
+      touch-action: manipulation;
+      box-sizing: border-box;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    html, body {
+      width: 100%;
+      height: 100%;
+      height: 100dvh;
+      margin: 0;
+      padding: 0;
+      background-color: #000000;
+      color: #e5e5e5;
+      overflow: hidden;
+      font-family: -apple-system, BlinkMacSystemFont, "Noto Sans KR", sans-serif;
+    }
+
+    .font-mono-tech { font-family: 'Share Tech Mono', monospace, sans-serif; }
+    .font-creepy { font-family: 'Creepster', cursive, sans-serif; }
+
+    .vhs-overlay {
+      background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.45) 50%),
+                  linear-gradient(90deg, rgba(255, 0, 0, 0.03), rgba(0, 255, 0, 0.015), rgba(0, 0, 255, 0.03));
+      background-size: 100% 3px, 4px 100%;
+      pointer-events: none;
+    }
+
+    @keyframes violent-shake {
+      0% { transform: translate(0, 0) scale(1.08) rotate(0deg); }
+      15% { transform: translate(-24px, 18px) scale(1.18) rotate(-2deg); }
+      30% { transform: translate(26px, -22px) scale(1.24) rotate(2deg); }
+      45% { transform: translate(-22px, -24px) scale(1.26) rotate(-3deg); }
+      60% { transform: translate(26px, 24px) scale(1.3) rotate(3deg); }
+      75% { transform: translate(-20px, 16px) scale(1.22) rotate(-1deg); }
+      100% { transform: translate(0, 0) scale(1.08) rotate(0deg); }
+    }
+    .shake-active { animation: violent-shake 0.06s infinite alternate; }
+
+    @keyframes boing-wiggle {
+      0% { transform: scale(0.2) rotate(-15deg); }
+      35% { transform: scale(1.4) rotate(15deg); }
+      60% { transform: scale(0.9) rotate(-8deg); }
+      80% { transform: scale(1.15) rotate(5deg); }
+      100% { transform: scale(1.05) rotate(0deg); }
+    }
+    .skibidi-active { animation: boing-wiggle 0.7s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
+
+    @keyframes blood-pulse {
+      0% { opacity: 0.3; }
+      50% { opacity: 0.75; }
+      100% { opacity: 0.3; }
+    }
+    .jumpscare-blood-fx { animation: blood-pulse 0.25s infinite ease-in-out; }
+
+    .interactive-hotspot {
+      cursor: pointer;
+      position: absolute;
+      z-index: 25;
+      background: rgba(255, 255, 255, 0.001);
+      transition: all 0.15s ease;
+    }
+    .interactive-hotspot:hover, .interactive-hotspot:active {
+      box-shadow: inset 0 0 24px rgba(255, 220, 90, 0.25), 0 0 10px rgba(255, 200, 80, 0.3);
+      border: 1.5px dashed rgba(255, 235, 120, 0.5);
+    }
+
+    .danger-vignette { box-shadow: inset 0 0 120px rgba(220, 20, 20, 0.7); }
+  </style>
+</head>
+
+<body class="w-screen h-screen flex items-center justify-center bg-black select-none overflow-hidden">
+
+  <div id="game-container" class="relative w-full h-full max-w-[1440px] max-h-[920px] aspect-[16/10] bg-zinc-950 overflow-hidden shadow-2xl flex flex-col justify-between border border-zinc-900">
+    
+    <!-- Top HUD -->
+    <header id="game-hud" class="relative z-30 flex items-center justify-between px-3 md:px-6 py-2 bg-black/85 backdrop-blur-md border-b border-zinc-800 text-zinc-300">
+      <div class="flex items-center space-x-2">
+        <span class="w-2.5 h-2.5 rounded-full bg-red-600 animate-ping inline-block"></span>
+        <span id="current-location-text" class="text-xs md:text-sm font-mono-tech tracking-wider uppercase text-zinc-100 font-bold">구역: B2</span>
+      </div>
+
+      <!-- Lives (5 Strikes) Indicator -->
+      <div class="flex items-center space-x-2">
+        <span class="text-[11px] font-mono-tech tracking-widest text-zinc-400 hidden sm:inline">위험 감지:</span>
+        <div id="lives-container" class="flex space-x-1.5">
+          <div class="life-slot w-5 h-5 rounded border border-red-800 bg-red-950/60 flex items-center justify-center text-[10px] text-red-500 font-mono-tech">1</div>
+          <div class="life-slot w-5 h-5 rounded border border-red-800 bg-red-950/60 flex items-center justify-center text-[10px] text-red-500 font-mono-tech">2</div>
+          <div class="life-slot w-5 h-5 rounded border border-red-800 bg-red-950/60 flex items-center justify-center text-[10px] text-red-500 font-mono-tech">3</div>
+          <div class="life-slot w-5 h-5 rounded border border-red-800 bg-red-950/60 flex items-center justify-center text-[10px] text-red-500 font-mono-tech">4</div>
+          <div class="life-slot w-5 h-5 rounded border border-red-800 bg-red-950/60 flex items-center justify-center text-[10px] text-red-500 font-mono-tech">5</div>
+        </div>
+      </div>
+
+      <div class="flex items-center space-x-2">
+        <div id="idle-warning" class="hidden text-amber-400 flex items-center space-x-1 text-[11px] font-mono-tech animate-pulse">
+          <i data-lucide="eye" class="w-3.5 h-3.5"></i>
+          <span class="hidden xs:inline">시선 감지...</span>
+        </div>
+
+        <button id="sound-toggle-btn" class="p-1.5 rounded bg-zinc-800/80 hover:bg-zinc-700 text-zinc-300 transition-colors" title="음향 토글">
+          <i data-lucide="volume-2" class="w-4 h-4" id="sound-icon"></i>
+        </button>
+      </div>
+    </header>
+
+    <!-- Main Viewport -->
+    <main id="scene-viewport" class="relative flex-1 w-full h-full overflow-hidden bg-black flex items-center justify-center cursor-crosshair">
+      <img id="scene-bg" src="./B2.jpg" alt="Room View" class="absolute inset-0 w-full h-full object-cover pointer-events-none transition-opacity duration-300 block z-0" />
+
+      <!-- Interactive Hotspots Layer -->
+      <div id="hotspots-layer" class="absolute inset-0 w-full h-full pointer-events-auto z-20"></div>
+
+      <!-- Mouse Tooltip removed for pure atmospheric immersion -->
+
+      <!-- Atmospheric Overlays -->
+      <div class="vhs-overlay absolute inset-0 z-10 pointer-events-none"></div>
+      <div id="danger-glow" class="absolute inset-0 z-10 pointer-events-none opacity-0 transition-opacity duration-500 danger-vignette"></div>
+
+      <!-- Custom In-Game Puzzle Modals -->
+      <div id="puzzle-modal" class="absolute inset-0 z-40 bg-black/80 backdrop-blur-sm hidden flex items-center justify-center p-4">
+        <div id="puzzle-card" class="bg-zinc-950 border border-zinc-700 rounded-xl p-5 max-w-sm w-full text-center shadow-2xl relative">
+          <!-- Dynamic Modal Content Injected Here -->
+        </div>
+      </div>
+    </main>
+
+    <!-- Bottom Inventory & Navigation -->
+    <footer id="inventory-bar" class="relative z-30 px-3 md:px-6 py-2 bg-black/90 border-t border-zinc-800 flex items-center justify-between flex-wrap gap-2">
+      <div class="flex items-center space-x-2 md:space-x-3">
+        <span class="text-[11px] md:text-xs font-mono-tech text-zinc-400 uppercase tracking-wider">소지품:</span>
+        <div id="inventory-slots" class="flex space-x-1.5 md:space-x-2">
+          <div class="inv-slot w-10 h-10 md:w-11 md:h-11 rounded border border-dashed border-zinc-700 bg-zinc-900/60 flex items-center justify-center text-zinc-500 text-[10px]" data-slot="0">비어있음</div>
+          <div class="inv-slot w-10 h-10 md:w-11 md:h-11 rounded border border-dashed border-zinc-700 bg-zinc-900/60 flex items-center justify-center text-zinc-500 text-[10px]" data-slot="1">비어있음</div>
+          <div class="inv-slot w-10 h-10 md:w-11 md:h-11 rounded border border-dashed border-zinc-700 bg-zinc-900/60 flex items-center justify-center text-zinc-500 text-[10px]" data-slot="2">비어있음</div>
+          <div class="inv-slot w-10 h-10 md:w-11 md:h-11 rounded border border-dashed border-zinc-700 bg-zinc-900/60 flex items-center justify-center text-zinc-500 text-[10px]" data-slot="3">비어있음</div>
+        </div>
+      </div>
+
+      <div class="flex items-center space-x-2 text-[11px] font-mono-tech text-zinc-400">
+        <span class="inline-block w-2 h-2 rounded-full bg-emerald-500/80 mr-1 animate-pulse"></span>
+        <span id="quick-status-text">포인트 앤 클릭으로 탈출구를 탐색하십시오</span>
+      </div>
+    </footer>
+
+    <!-- Jumpscare Overlay -->
+    <div id="jumpscare-layer" class="absolute inset-0 z-50 bg-black hidden flex items-center justify-center overflow-hidden">
+      <div class="absolute inset-0 bg-black pointer-events-none z-0"></div>
+      <img id="jumpscare-img" src="./B_ntt.png" alt="Monster Jumpscare" class="w-full h-full object-contain filter contrast-125 brightness-95 drop-shadow-[0_0_80px_rgba(180,0,0,0.85)] pointer-events-none block z-10 scale-105" />
+      <div id="jumpscare-tint" class="absolute inset-0 bg-[radial-gradient(circle_at_center,transparent_45%,rgba(160,0,0,0.6)_85%,rgba(0,0,0,0.95)_100%)] pointer-events-none z-20 jumpscare-blood-fx"></div>
+    </div>
+
+    <!-- Game Over Screen -->
+    <div id="gameover-layer" class="absolute inset-0 z-50 bg-black hidden flex-col items-center justify-center">
+      <img id="gameover-bg" src="./gameover.jpg" alt="Game Over" class="absolute inset-0 w-full h-full object-cover block z-0" />
+      <div class="relative z-10 w-full h-full flex flex-col items-center justify-end pb-10 md:pb-14">
+        <div class="flex items-center space-x-8 md:space-x-20 mb-3">
+          <button id="btn-retry" class="px-5 py-2 md:px-7 md:py-2.5 bg-black/75 hover:bg-red-950/85 active:scale-95 border border-zinc-600 hover:border-red-500 rounded text-xs md:text-sm font-mono-tech text-zinc-100 hover:text-red-300 tracking-widest transition-all backdrop-blur-md shadow-2xl">다시 시도</button>
+          <button id="btn-main-menu" class="px-5 py-2 md:px-7 md:py-2.5 bg-black/75 hover:bg-zinc-800/85 active:scale-95 border border-zinc-600 hover:border-zinc-300 rounded text-xs md:text-sm font-mono-tech text-zinc-100 hover:text-white tracking-widest transition-all backdrop-blur-md shadow-2xl">메인 메뉴</button>
+        </div>
+        <p class="text-[11px] font-mono-tech text-zinc-400 drop-shadow">괴물에게 5번 발각되어 백룸의 어둠에 삼켜졌습니다.</p>
+      </div>
+    </div>
+
+    <!-- Game Clear Screen -->
+    <div id="gameclear-layer" class="absolute inset-0 z-50 bg-black hidden flex flex-col items-center justify-center p-6 text-center">
+      <div class="max-w-md p-6 md:p-8 rounded-xl bg-zinc-950/90 border border-emerald-500/60 shadow-[0_0_60px_rgba(16,185,129,0.25)] backdrop-blur-xl">
+        <div class="w-14 h-14 mx-auto mb-3 rounded-full bg-emerald-950/80 border border-emerald-500 flex items-center justify-center text-emerald-400">
+          <i data-lucide="door-open" class="w-7 h-7"></i>
+        </div>
+        <h2 class="text-2xl md:text-3xl font-creepy text-emerald-400 mb-2 tracking-widest">탈출 성공 (ESCAPE CLEAR)</h2>
+        <p class="text-xs md:text-sm font-mono-tech text-zinc-300 mb-5 leading-relaxed">
+          화장실 바닥에서 찾아낸 최종 보안 키카드로 비상 탈출구(EXIT)를 개방하고 생존했습니다.
+        </p>
+        <button id="btn-clear-restart" class="w-full py-2.5 bg-emerald-600 hover:bg-emerald-500 text-black font-bold tracking-widest rounded uppercase font-mono-tech text-sm transition-all shadow-lg active:scale-95">
+          처음부터 다시 도전
+        </button>
+      </div>
+    </div>
+
+    <!-- Title Screen -->
+    <div id="title-screen" class="absolute inset-0 z-40 bg-black flex flex-col items-center justify-center p-4 text-center overflow-hidden">
+      <img src="./start.jpg" alt="Title Background" class="absolute inset-0 w-full h-full object-cover opacity-60 filter contrast-125 pointer-events-none block z-0" />
+      <div class="absolute inset-0 bg-gradient-to-t from-black via-black/50 to-black/80 pointer-events-none z-0"></div>
+
+      <div class="max-w-md w-full p-6 md:p-8 rounded-xl bg-zinc-950/80 border border-zinc-800 backdrop-blur-md shadow-2xl relative z-10">
+        <div class="inline-block px-3 py-0.5 mb-2 bg-red-900/80 text-red-300 text-[10px] font-mono-tech tracking-widest uppercase rounded border border-red-700">SURVIVAL POINT & CLICK HORROR</div>
+        <h1 class="text-3xl md:text-5xl font-creepy tracking-wider text-red-600 mb-6 drop-shadow-[0_0_20px_rgba(220,38,38,0.85)]">THE ROOMS</h1>
+
+        <button id="btn-start-game" class="w-full py-3.5 bg-red-700 hover:bg-red-600 text-white font-bold tracking-widest rounded uppercase font-mono-tech text-sm transition-all duration-150 active:scale-95 shadow-[0_0_25px_rgba(185,28,28,0.6)]">
+          게임 시작 (START GAME)
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    class SoundEngine {
+      constructor() {
+        this.ctx = null;
+        this.muted = false;
+        this.bgmNodes = [];
+        this.activeJumpscare = null;
+
+        this.sfxPaths = {
+          jumpscare: './SFX_Jumpscare.wav',
+          click: './SFX_Player_Click.wav',
+          door: './SFX_Player_DoorOpening.wav',
+          item: './SFX_Player_ItemPickup.wav'
+        };
+      }
+
+      init() {
+        if (!this.ctx) {
+          const AudioContext = window.AudioContext || window.webkitAudioContext;
+          this.ctx = new AudioContext();
+        }
+        if (this.ctx && this.ctx.state === 'suspended') {
+          this.ctx.resume();
+        }
+        this.startBGM();
+      }
+
+      toggleMute() {
+        this.muted = !this.muted;
+        if (this.muted) {
+          this.stopBGM();
+          this.stopJumpscare();
+        } else {
+          this.startBGM();
+        }
+        return this.muted;
+      }
+
+      startBGM() {
+        if (this.muted) return;
+        if (!this.ctx) return;
+        if (this.ctx.state === 'suspended') this.ctx.resume();
+        if (this.bgmNodes.length > 0) return;
+
+        try {
+          const now = this.ctx.currentTime;
+          const osc1 = this.ctx.createOscillator();
+          osc1.type = 'sine';
+          osc1.frequency.setValueAtTime(74, now);
+
+          const osc2 = this.ctx.createOscillator();
+          osc2.type = 'sine';
+          osc2.frequency.setValueAtTime(74.05, now);
+
+          const oscOctave = this.ctx.createOscillator();
+          oscOctave.type = 'triangle';
+          oscOctave.frequency.setValueAtTime(148, now);
+
+          const octaveGain = this.ctx.createGain();
+          octaveGain.gain.setValueAtTime(0.025, now);
+          oscOctave.connect(octaveGain);
+
+          const mainFilter = this.ctx.createBiquadFilter();
+          mainFilter.type = 'lowpass';
+          mainFilter.frequency.setValueAtTime(200, now);
+          mainFilter.Q.setValueAtTime(0.9, now);
+
+          const filterLFO = this.ctx.createOscillator();
+          filterLFO.frequency.setValueAtTime(0.055, now);
+          const filterLFOGain = this.ctx.createGain();
+          filterLFOGain.gain.setValueAtTime(70, now);
+          filterLFO.connect(filterLFOGain);
+          filterLFOGain.connect(mainFilter.frequency);
+
+          const droneGain = this.ctx.createGain();
+          droneGain.gain.setValueAtTime(0.15, now);
+
+          const lfo1 = this.ctx.createOscillator();
+          lfo1.frequency.setValueAtTime(0.071, now);
+          const lfoGain1 = this.ctx.createGain();
+          lfoGain1.gain.setValueAtTime(0.045, now);
+          lfo1.connect(lfoGain1);
+          lfoGain1.connect(droneGain.gain);
+
+          const lfo2 = this.ctx.createOscillator();
+          lfo2.frequency.setValueAtTime(0.043, now);
+          const lfoGain2 = this.ctx.createGain();
+          lfoGain2.gain.setValueAtTime(0.04, now);
+          lfo2.connect(lfoGain2);
+          lfoGain2.connect(droneGain.gain);
+
+          const oscHum = this.ctx.createOscillator();
+          oscHum.type = 'sine';
+          oscHum.frequency.setValueAtTime(114, now);
+
+          const oscTritone = this.ctx.createOscillator();
+          oscTritone.type = 'sine';
+          oscTritone.frequency.setValueAtTime(161.2, now);
+
+          const eerieFilter = this.ctx.createBiquadFilter();
+          eerieFilter.type = 'bandpass';
+          eerieFilter.frequency.setValueAtTime(138, now);
+          eerieFilter.Q.setValueAtTime(1.8, now);
+
+          const eerieGain = this.ctx.createGain();
+          eerieGain.gain.setValueAtTime(0.02, now);
+
+          const eerieLFO = this.ctx.createOscillator();
+          eerieLFO.frequency.setValueAtTime(0.038, now);
+          const eerieLFOGain = this.ctx.createGain();
+          eerieLFOGain.gain.setValueAtTime(0.025, now);
+          eerieLFO.connect(eerieLFOGain);
+          eerieLFOGain.connect(eerieGain.gain);
+
+          oscHum.connect(eerieFilter);
+          oscTritone.connect(eerieFilter);
+          eerieFilter.connect(eerieGain);
+
+          const bgmMaster = this.ctx.createGain();
+          bgmMaster.gain.setValueAtTime(0.26, now);
+
+          osc1.connect(mainFilter);
+          osc2.connect(mainFilter);
+          octaveGain.connect(mainFilter);
+          mainFilter.connect(droneGain);
+          droneGain.connect(bgmMaster);
+          eerieGain.connect(bgmMaster);
+          bgmMaster.connect(this.ctx.destination);
+
+          osc1.start();
+          osc2.start();
+          oscOctave.start();
+          filterLFO.start();
+          lfo1.start();
+          lfo2.start();
+          oscHum.start();
+          oscTritone.start();
+          eerieLFO.start();
+
+          this.bgmNodes = [
+            osc1, osc2, oscOctave, octaveGain, mainFilter, filterLFO, filterLFOGain,
+            droneGain, lfo1, lfoGain1, lfo2, lfoGain2,
+            oscHum, oscTritone, eerieFilter, eerieGain, eerieLFO, eerieLFOGain,
+            bgmMaster
+          ];
+        } catch (e) {}
+      }
+
+      stopBGM() {
+        this.bgmNodes.forEach(node => {
+          try {
+            if (node.stop) node.stop();
+            if (node.disconnect) node.disconnect();
+          } catch (e) {}
+        });
+        this.bgmNodes = [];
+      }
+
+      playSound(name, volume = 0.6) {
+        if (this.muted) return;
+        const path = this.sfxPaths[name];
+        if (!path) return;
+        try {
+          const sfx = new Audio(path);
+          sfx.volume = volume;
+          sfx.play().catch(() => {});
+        } catch (e) {}
+      }
+
+      playClick() { this.playSound('click', 0.5); }
+      playItemPickup() { this.playSound('item', 0.7); }
+      playDoorOpen() { this.playSound('door', 0.75); }
+
+      // 짧은 고전압 전원 인가 및 릴레이 작동 효과음 (텍스트 없이 기믹 완수 체감)
+      playPowerOnSound() {
+        if (this.muted || !this.ctx) return;
+        try {
+          const now = this.ctx.currentTime;
+          
+          // 1. 고전압 코일 험 & 상승 주파수 (전기 충전감)
+          const osc1 = this.ctx.createOscillator();
+          const osc2 = this.ctx.createOscillator();
+          const gainNode = this.ctx.createGain();
+
+          osc1.type = 'sawtooth';
+          osc1.frequency.setValueAtTime(60, now);
+          osc1.frequency.exponentialRampToValueAtTime(320, now + 0.35);
+
+          osc2.type = 'sine';
+          osc2.frequency.setValueAtTime(120, now);
+          osc2.frequency.exponentialRampToValueAtTime(640, now + 0.35);
+
+          // 2. 전기 스파크/필터
+          const filter = this.ctx.createBiquadFilter();
+          filter.type = 'bandpass';
+          filter.frequency.setValueAtTime(450, now);
+          filter.Q.setValueAtTime(3.0, now);
+
+          gainNode.gain.setValueAtTime(0.01, now);
+          gainNode.gain.linearRampToValueAtTime(0.35, now + 0.1);
+          gainNode.gain.exponentialRampToValueAtTime(0.001, now + 0.45);
+
+          osc1.connect(filter);
+          osc2.connect(filter);
+          filter.connect(gainNode);
+          gainNode.connect(this.ctx.destination);
+
+          osc1.start(now);
+          osc2.start(now);
+          osc1.stop(now + 0.46);
+          osc2.stop(now + 0.46);
+        } catch (e) {}
+      }
+
+      playJumpscare(targetDuration = 1.45) {
+        if (this.muted) return;
+        this.stopJumpscare();
+        try {
+          const sfx = new Audio(this.sfxPaths.jumpscare);
+          sfx.volume = 1.0;
+          this.activeJumpscare = sfx;
+          const applyRateAndPlay = () => {
+            if (sfx.duration && sfx.duration > 0) {
+              const calcRate = sfx.duration / targetDuration;
+              sfx.playbackRate = Math.min(Math.max(calcRate, 0.7), 3.0);
+            } else {
+              sfx.playbackRate = 1.35;
+            }
+            sfx.play().catch(() => {});
+          };
+          if (sfx.readyState >= 1) applyRateAndPlay();
+          else sfx.addEventListener('loadedmetadata', applyRateAndPlay, { once: true });
+        } catch (e) {}
+      }
+
+      // 스키비디 토일렛 전용 코믹 '띠용' 효과음 (스프링 바이올린 합성음)
+      playBoingSound() {
+        if (this.muted || !this.ctx) return;
+        try {
+          const now = this.ctx.currentTime;
+          const osc = this.ctx.createOscillator();
+          const gain = this.ctx.createGain();
+
+          osc.type = 'sine';
+          // 150Hz에서 520Hz로 빠르게 튀어올랐다가 진동
+          osc.frequency.setValueAtTime(160, now);
+          osc.frequency.exponentialRampToValueAtTime(540, now + 0.18);
+          osc.frequency.exponentialRampToValueAtTime(320, now + 0.38);
+          osc.frequency.exponentialRampToValueAtTime(450, now + 0.55);
+
+          // 와우/피치 트레몰로
+          const wobble = this.ctx.createOscillator();
+          wobble.frequency.setValueAtTime(22, now);
+          const wobbleGain = this.ctx.createGain();
+          wobbleGain.gain.setValueAtTime(35, now);
+          wobble.connect(wobbleGain);
+          wobbleGain.connect(osc.frequency);
+
+          gain.gain.setValueAtTime(0.4, now);
+          gain.gain.exponentialRampToValueAtTime(0.01, now + 0.75);
+
+          osc.connect(gain);
+          gain.connect(this.ctx.destination);
+
+          wobble.start(now);
+          osc.start(now);
+          wobble.stop(now + 0.75);
+          osc.stop(now + 0.75);
+        } catch (e) {}
+      }
+
+      stopJumpscare() {
+        if (this.activeJumpscare) {
+          try {
+            this.activeJumpscare.pause();
+            this.activeJumpscare.currentTime = 0;
+          } catch (e) {}
+          this.activeJumpscare = null;
+        }
+      }
+
+      playGameOver() {
+        if (this.muted) return;
+        this.stopBGM();
+        this.playSound('jumpscare', 0.85);
+      }
+    }
+    const audio = new SoundEngine();
+  </script>
+
+  <script>
+    const requiredImages = [
+      './start.jpg', './gameover.jpg',
+      './B2.jpg', './B2_open.jpg', './B1.jpg', './B1_right.jpg', './B1_room.jpg',
+      './library_boss.jpg', './library.jpg', './restaurant.jpg', './restaurant_toilet.jpg',
+      './toilet.jpg', './skibiditoilet.jpg', './EXIT.jpg',
+      './B_ntt.png', './library_ntt.png', './restaurant_ntt.png', './EXIT_ntt.png', './skibidi_ntt.png'
+    ];
+
+    function preloadAllImages() {
+      requiredImages.forEach(src => {
+        const img = new Image();
+        img.src = src;
+      });
+    }
+
+    const roomDifficultySettings = {
+      'B2': { idleThreshold: 14, label: '난이도: 보통 (14초)' },
+      'B2_open': { idleThreshold: 13, label: '난이도: 보통 (13초)' },
+      'B1': { idleThreshold: 12, label: '난이도: 주의 (12초)' },
+      'B1_room': { idleThreshold: 11, label: '난이도: 주의 (11초)' },
+      'B1_right': { idleThreshold: 11, label: '난이도: 주의 (11초)' },
+      'library_boss': { idleThreshold: 10, label: '난이도: 위험 (10초)' },
+      'library': { idleThreshold: 10, label: '난이도: 위험 (10초)' },
+      'restaurant': { idleThreshold: 8, label: '난이도: 극위험 (8초)' },
+      'restaurant_toilet': { idleThreshold: 9, label: '난이도: 위험 (9초)' },
+      'toilet': { idleThreshold: 8, label: '난이도: 극위험 (8초)' },
+      'skibiditoilet': { idleThreshold: 15, label: '안전 구역 (15초)' },
+      'EXIT': { idleThreshold: 6, label: '난이도: 절체절명 (6초)' }
+    };
+
+    window.gameState = {
+      currentRoom: 'B2',
+      livesLost: 0,
+      maxStrikes: 5,
+      inventory: [],
+      isJumpscarePlaying: false,
+      isGameOver: false,
+      isGameClear: false,
+      idleSeconds: 0,
+      idleThresholdSeconds: 14,
+      idleTimerInterval: null,
+      flags: {
+        b2PowerOn: false,
+        b2DoorUnlocked: false,
+        b1RoomPuzzleSolved: false,   // 조건 1: B1_room 수수께끼
+        b1RightLeverFound: false,    // 조건 2: B1_right 레버 획득
+        b1BossDoorUnlocked: false,
+        libraryBossClueFound: false, // library_boss 단서 열람
+        libraryKeyFound: false,      // library 탈출 열쇠
+        libraryDoorOpen: false,
+        vendingMachineSolved: false, // restaurant 자판기 비밀번호 해금
+        restaurantDoorOpen: false,
+        toiletKeycardFound: false,   // toilet 최종 키카드
+        exitBreakerPulled: false
+      }
+    };
+
+    const roomBackgrounds = {
+      'B2': './B2.jpg',
+      'B2_open': './B2_open.jpg',
+      'B1': './B1.jpg',
+      'B1_right': './B1_right.jpg',
+      'B1_room': './B1_room.jpg',
+      'library_boss': './library_boss.jpg',
+      'library': './library.jpg',
+      'restaurant': './restaurant.jpg',
+      'restaurant_toilet': './restaurant_toilet.jpg',
+      'toilet': './toilet.jpg',
+      'skibiditoilet': './skibiditoilet.jpg',
+      'EXIT': './EXIT.jpg'
+    };
+
+    const roomMonsters = {
+      'B2': './B_ntt.png',
+      'B2_open': './B_ntt.png',
+      'B1': './B_ntt.png',
+      'B1_right': './B_ntt.png',
+      'B1_room': './B_ntt.png',
+      'library_boss': './library_ntt.png',
+      'library': './library_ntt.png',
+      'restaurant': './restaurant_ntt.png',
+      'restaurant_toilet': './restaurant_ntt.png',
+      'toilet': './restaurant_ntt.png',
+      'skibiditoilet': './skibidi_ntt.png',
+      'EXIT': './EXIT_ntt.png'
+    };
+  </script>
+
+  <script>
+    const roomHotspots = {
+      // 1. B2 (지하실 메인)
+      'B2': [
+        { id: 'b2-breaker', name: '벽면 고전압 배전함', rect: { left: '3%', top: '22%', width: '11%', height: '32%' }, action: () => handleB2Breaker() },
+        { id: 'b2-boiler', name: '대형 온수 보일러 탱크', rect: { left: '23%', top: '35%', width: '13%', height: '38%' }, action: () => audio.playClick() },
+        { id: 'b2-vent', name: '어두운 환기 배관 덕트', rect: { left: '37%', top: '22%', width: '11%', height: '42%' }, action: () => triggerMonsterTrap('B2') },
+        { id: 'b2-door', name: '철제 이중문 (EXIT)', rect: { left: '60%', top: '35%', width: '14%', height: '26%' }, action: () => handleB2Door() }
+      ],
+
+      // 2. B2_open (문 열고 나온 통로)
+      'B2_open': [
+        { id: 'b2o-stairs', name: 'B1 계단 (올라가기)', rect: { left: '32%', top: '25%', width: '15%', height: '50%' }, action: () => { audio.playDoorOpen(); setTimeout(() => changeRoom('B1'), 300); } },
+        { id: 'b2o-deep-hall', name: '오른쪽 깊숙한 통로 (B2로 복귀)', rect: { left: '52%', top: '40%', width: '7%', height: '20%' }, action: () => { audio.playDoorOpen(); setTimeout(() => changeRoom('B2'), 300); } },
+        { id: 'b2o-boiler', name: '우측 보일러 배관', rect: { left: '83%', top: '40%', width: '15%', height: '55%' }, action: () => audio.playClick() },
+        { id: 'b2o-fusebox', name: '배전반 점검', rect: { left: '66%', top: '32%', width: '11%', height: '36%' }, action: () => audio.playClick() }
+      ],
+
+      // 3. B1 (지하 1층 메인 홀)
+      'B1': [
+        { id: 'b1-stairs-door', name: '왼쪽 계단 위 철문 (서재 집무실 연결통로)', rect: { left: '20%', top: '15%', width: '10%', height: '40%' }, action: () => handleB1BossDoor() },
+        { id: 'b1-room-door', name: '오른쪽 기계제어실 문 (B1_room)', rect: { left: '71%', top: '25%', width: '10%', height: '55%' }, action: () => { audio.playDoorOpen(); setTimeout(() => changeRoom('B1_room'), 300); } },
+        { id: 'b1-deep-corridor', name: '더 안쪽 오른쪽 통로 (B1_right)', rect: { left: '54%', top: '39%', width: '6%', height: '20%' }, action: () => { audio.playDoorOpen(); setTimeout(() => changeRoom('B1_right'), 300); } },
+        { id: 'b1-back-stairs', name: '뒤편 계단 (B2_open으로 내려가기)', rect: { left: '35%', top: '80%', width: '30%', height: '18%' }, action: () => { audio.playDoorOpen(); setTimeout(() => changeRoom('B2_open'), 300); } }
+      ],
+
+      // 4. B1_room (기계제어실 - 수수께끼)
+      'B1_room': [
+        { id: 'b1r-panels', name: '동력 제어반 수수께끼 풀기', rect: { left: '4%', top: '24%', width: '25%', height: '60%' }, action: () => openB1RoomPuzzle() },
+        { id: 'b1r-table', name: '작업대 메모 확인', rect: { left: '29%', top: '60%', width: '30%', height: '35%' }, action: () => openClueModal('작업대에 남겨진 엔지니어 메모', '동력 제어반 4개의 스위치 조합:<br><span class="text-amber-400 font-bold text-base">[ 3 - 1 - 4 - 2 ]</span> 순서로 과전압을 방출해야 격벽이 열린다.') },
+        { id: 'b1r-tank', name: '고압 압축 탱크 밸브', rect: { left: '68%', top: '23%', width: '13%', height: '50%' }, action: () => triggerMonsterTrap('B1_room') },
+        { id: 'b1r-door', name: '출구 (B1 복도로 돌아가기)', rect: { left: '46%', top: '85%', width: '18%', height: '14%' }, action: () => { audio.playDoorOpen(); setTimeout(() => changeRoom('B1'), 300); } }
+      ],
+
+      // 5. B1_right (창고 및 보관실 - 아이템)
+      'B1_right': [
+        { id: 'b1rt-lockers', name: '좌측 철제 라커함 (조사하기)', rect: { left: '9%', top: '35%', width: '22%', height: '58%' }, action: () => handleB1RightLocker() },
+        { id: 'b1rt-shelves', name: '우측 정리 선반', rect: { left: '70%', top: '45%', width: '18%', height: '50%' }, action: () => audio.playClick() },
+        { id: 'b1rt-dark-corner', name: '가운데 칠흑의 어둠', rect: { left: '42%', top: '40%', width: '15%', height: '30%' }, action: () => triggerMonsterTrap('B1_right') },
+        { id: 'b1rt-door', name: '출구 (B1 복도로 돌아가기)', rect: { left: '38%', top: '85%', width: '25%', height: '14%' }, action: () => { audio.playDoorOpen(); setTimeout(() => changeRoom('B1'), 300); } }
+      ],
+
+      // 6. library_boss (서재 집무실)
+      'library_boss': [
+        { id: 'lb-left-window', name: '좌측 유리창문 (서재로 넘어가기)', rect: { left: '0%', top: '8%', width: '30%', height: '85%' }, action: () => { audio.playDoorOpen(); setTimeout(() => changeRoom('library'), 300); } },
+        { id: 'lb-back-bookshelf', name: '의자 뒤쪽 중앙 서가', rect: { left: '31%', top: '28%', width: '16%', height: '35%' }, action: () => handleLibraryBossBookshelf() },
+        { id: 'lb-right-bookshelf', name: '우측 벽면 서가', rect: { left: '69%', top: '12%', width: '19%', height: '80%' }, action: () => audio.playClick() },
+        { id: 'lb-desk-book', name: '책상 위 펼쳐진 고서 (단서 조사)', rect: { left: '43%', top: '61%', width: '12%', height: '8%' }, action: () => handleLibraryBossBook() },
+        { id: 'lb-back-door', name: 'B1 계단문 (B1으로 내려가기)', rect: { left: '50%', top: '28%', width: '14%', height: '35%' }, action: () => { audio.playDoorOpen(); setTimeout(() => changeRoom('B1'), 300); } }
+      ],
+
+      // 7. library (일반 서재)
+      'library': [
+        { id: 'lib-right-window', name: '우측 유리창문 (서재 집무실로 복귀)', rect: { left: '63%', top: '15%', width: '36%', height: '80%' }, action: () => { audio.playDoorOpen(); setTimeout(() => changeRoom('library_boss'), 300); } },
+        { id: 'lib-left-shelf', name: '좌측 고서적 서가 (비밀 책장)', rect: { left: '1%', top: '5%', width: '20%', height: '88%' }, action: () => handleLibrarySecretShelf() },
+        { id: 'lib-middle-shelf', name: '중앙 깊은 서가 틈새', rect: { left: '36%', top: '34%', width: '24%', height: '26%' }, action: () => triggerMonsterTrap('library') },
+        { id: 'lib-front-desk', name: '앞쪽 책상 서류 더미', rect: { left: '56%', top: '62%', width: '40%', height: '34%' }, action: () => audio.playClick() },
+        { id: 'lib-exit-door', name: '식당 연결문 (restaurant 로 이동)', rect: { left: '30%', top: '34%', width: '7%', height: '26%' }, action: () => handleLibraryDoor() }
+      ],
+
+      // 8. restaurant (식당)
+      'restaurant': [
+        { id: 'res-vending', name: '음료 자판기 (암호 기믹)', rect: { left: '22%', top: '36%', width: '9%', height: '22%' }, action: () => openVendingPuzzle() },
+        { id: 'res-keypad-door', name: '비밀번호 잠금문 (EXIT 복도로 이동)', rect: { left: '35%', top: '33%', width: '9%', height: '28%' }, action: () => openRestaurantKeypad() },
+        { id: 'res-kitchen', name: '어두운 주방 배식구 안쪽', rect: { left: '44%', top: '39%', width: '18%', height: '11%' }, action: () => triggerMonsterTrap('restaurant') },
+        { id: 'res-trash', name: '음식물 잔반통', rect: { left: '41%', top: '48%', width: '6%', height: '14%' }, action: () => triggerMonsterTrap('restaurant') },
+        { id: 'res-right-space', name: '오른쪽 끝 남는 공간 (화장실 통로로 이동)', rect: { left: '88%', top: '30%', width: '12%', height: '65%' }, action: () => { audio.playDoorOpen(); setTimeout(() => changeRoom('restaurant_toilet'), 300); } },
+        { id: 'res-back-library', name: '서재로 돌아가는 문', rect: { left: '0%', top: '80%', width: '15%', height: '20%' }, action: () => { audio.playDoorOpen(); setTimeout(() => changeRoom('library'), 300); } }
+      ],
+
+      // 9. restaurant_toilet (식당-화장실 중간 통로)
+      'restaurant_toilet': [
+        { id: 'rt-forward-door', name: '정면 화장실 입구 (toilet 으로 이동)', rect: { left: '37%', top: '30%', width: '25%', height: '55%' }, action: () => { audio.playDoorOpen(); setTimeout(() => changeRoom('toilet'), 300); } },
+        { id: 'rt-back-res', name: '식당으로 돌아가기', rect: { left: '35%', top: '85%', width: '30%', height: '14%' }, action: () => { audio.playDoorOpen(); setTimeout(() => changeRoom('restaurant'), 300); } }
+      ],
+
+      // 10. toilet (공용 화장실)
+      'toilet': [
+        { id: 'toi-tile', name: '세면대 앞 덜컹거리는 바닥 타일', rect: { left: '41%', top: '78%', width: '18%', height: '15%' }, action: () => handleToiletFloorTile() },
+        { id: 'toi-stall-right', name: '오른쪽 변기 칸막이 (skibiditoilet 으로 이동)', rect: { left: '71%', top: '15%', width: '26%', height: '78%' }, action: () => { audio.playDoorOpen(); setTimeout(() => changeRoom('skibiditoilet'), 300); } },
+        { id: 'toi-mirror', name: '세면대 및 흐린 거울', rect: { left: '37%', top: '22%', width: '24%', height: '35%' }, action: () => audio.playClick() },
+        { id: 'toi-back-hall', name: '화장실 통로로 돌아가기', rect: { left: '2%', top: '80%', width: '20%', height: '18%' }, action: () => { audio.playDoorOpen(); setTimeout(() => changeRoom('restaurant_toilet'), 300); } }
+      ],
+
+      // 11. skibiditoilet (변기 칸 - 스키비디 이벤트)
+      'skibiditoilet': [
+        { id: 'st-toilet-bowl', name: '중앙 좌변기 (열어보기)', rect: { left: '38%', top: '17%', width: '24%', height: '70%' }, action: () => handleSkibidiToiletEvent() },
+        { id: 'st-back-toilet', name: '화장실 홀로 돌아가기', rect: { left: '35%', top: '87%', width: '30%', height: '12%' }, action: () => { audio.playDoorOpen(); setTimeout(() => changeRoom('toilet'), 300); } }
+      ],
+
+      // 12. EXIT (최종 탈출 복도)
+      'EXIT': [
+        { id: 'ex-fire-cab', name: '소화전 비상 전원 함', rect: { left: '78%', top: '39%', width: '9%', height: '36%' }, action: () => handleExitFireCabinet() },
+        { id: 'ex-dark-corridor', name: '복도 끝 칠흑의 심연', rect: { left: '43%', top: '26%', width: '12%', height: '22%' }, action: () => triggerMonsterTrap('EXIT') },
+        { id: 'ex-final-door', name: '중앙 비상구 (EXIT 최종 탈출 도어)', rect: { left: '56%', top: '18%', width: '6%', height: '8%' }, action: () => handleFinalExitDoor() },
+        { id: 'ex-back-res', name: '식당으로 돌아가기', rect: { left: '0%', top: '82%', width: '18%', height: '18%' }, action: () => { audio.playDoorOpen(); setTimeout(() => changeRoom('restaurant'), 300); } }
+      ]
+    };
+  </script>
+
+  <script>
+    function addItem(name, icon, desc) {
+      if (window.gameState.inventory.length >= 4) return;
+      window.gameState.inventory.push({ name, icon, desc });
+      renderInventory();
+    }
+    function hasItem(name) { return window.gameState.inventory.some(item => item.name === name); }
+
+    function renderInventory() {
+      const slots = document.querySelectorAll('.inv-slot');
+      slots.forEach((slot, idx) => {
+        const item = window.gameState.inventory[idx];
+        if (item) {
+          slot.innerHTML = `
+            <div class="flex flex-col items-center justify-center p-0.5 text-center w-full h-full bg-zinc-800/90 rounded border border-amber-600/70 text-amber-300">
+              <i data-lucide="${item.icon}" class="w-3.5 h-3.5 mb-0.5"></i>
+              <span class="text-[7.5px] font-mono-tech leading-none truncate w-full">${item.name}</span>
+            </div>
+          `;
+          slot.title = `${item.name}: ${item.desc}`;
+        } else {
+          slot.innerHTML = '비어있음';
+          slot.className = 'inv-slot w-10 h-10 md:w-11 md:h-11 rounded border border-dashed border-zinc-700 bg-zinc-900/60 flex items-center justify-center text-zinc-500 text-[10px]';
+          slot.title = '';
+        }
+      });
+      if (window.lucide) lucide.createIcons();
+    }
+
+    function onHotspotClick(callback) {
+      if (window.gameState.isJumpscarePlaying || window.gameState.isGameOver || window.gameState.isGameClear) return;
+      audio.init();
+
+      if (window.gameState.idleSeconds >= window.gameState.idleThresholdSeconds) {
+        window.gameState.idleSeconds = 0;
+        resetIdleTimer();
+        triggerMonsterTrap(window.gameState.currentRoom);
+        return;
+      }
+
+      resetIdleTimer();
+      if (navigator.vibrate) navigator.vibrate(25);
+      callback();
+    }
+
+    // Modal Helper
+    function openClueModal(title, textHtml) {
+      audio.playClick();
+      const modal = document.getElementById('puzzle-modal');
+      const card = document.getElementById('puzzle-card');
+      card.innerHTML = `
+        <h3 class="text-sm md:text-base font-bold text-amber-400 mb-2 font-mono-tech uppercase">${title}</h3>
+        <div class="text-xs text-zinc-300 mb-4 leading-relaxed">${textHtml}</div>
+        <button onclick="closePuzzleModal()" class="w-full py-2 bg-zinc-800 hover:bg-zinc-700 border border-zinc-600 rounded font-mono-tech text-xs text-zinc-200">닫기 (확인)</button>
+      `;
+      modal.classList.remove('hidden');
+    }
+
+    function closePuzzleModal() {
+      audio.playClick();
+      document.getElementById('puzzle-modal').classList.add('hidden');
+    }
+
+    // B2 Logic
+    function handleB2Breaker() {
+      if (!window.gameState.flags.b2PowerOn) {
+        window.gameState.flags.b2PowerOn = true;
+        // 텍스트 창 없이 전원 공급 전자음 재생 -> 0.5초 뒤 문 개방 메커니즘 구동
+        audio.playPowerOnSound();
+        setTimeout(() => {
+          audio.playDoorOpen();
+        }, 500);
+      } else {
+        audio.playClick();
+      }
+    }
+
+    function handleB2Door() {
+      if (!window.gameState.flags.b2PowerOn) {
+        // 전원이 꺼져 있으면 짧은 잠김 클릭음만 출력 (텍스트창 없음)
+        audio.playClick();
+        return;
+      }
+      // 전원이 켜져 있으면 전원음 -> 0.5초 뒤 문 열림음과 함께 다음 맵으로 전환
+      audio.playPowerOnSound();
+      setTimeout(() => {
+        audio.playDoorOpen();
+        setTimeout(() => changeRoom('B2_open'), 400);
+      }, 500);
+    }
+
+    // B1 & B1_room & B1_right Logic
+    function handleB1BossDoor() {
+      const cond1 = window.gameState.flags.b1RoomPuzzleSolved;
+      const cond2 = window.gameState.flags.b1RightLeverFound;
+
+      if (!cond1 || !cond2) {
+        let msg = '서재 집무실로 통하는 계단 철문이 잠겨 있습니다.<br><br>';
+        msg += cond1 ? '<span class="text-emerald-400">[완료]</span> 기계제어실 동력 복구<br>' : '<span class="text-red-400">[미달성]</span> B1_room(기계실) 수수께끼 풀기<br>';
+        msg += cond2 ? '<span class="text-emerald-400">[완료]</span> 계단 비상 레버 소지<br>' : '<span class="text-red-400">[미달성]</span> B1_right(통로)에서 아이템 획득';
+        openClueModal('계단 철문 잠김', msg);
+        return;
+      }
+
+      window.gameState.flags.b1BossDoorUnlocked = true;
+      audio.playDoorOpen();
+      setTimeout(() => changeRoom('library_boss'), 300);
+    }
+
+    // B1_room Puzzle Modal (Switches 3-1-4-2)
+    let b1SwitchesState = [];
+    function openB1RoomPuzzle() {
+      if (window.gameState.flags.b1RoomPuzzleSolved) {
+        openClueModal('동력 제어반', '이미 과전압 방출 회로가 가동되어 조건 1이 클리어되었습니다.');
+        return;
+      }
+      b1SwitchesState = [];
+      const modal = document.getElementById('puzzle-modal');
+      const card = document.getElementById('puzzle-card');
+      renderB1PuzzleUI(card);
+      modal.classList.remove('hidden');
+    }
+
+    function renderB1PuzzleUI(card) {
+      card.innerHTML = `
+        <h3 class="text-sm font-bold text-amber-400 mb-1 font-mono-tech">B1 동력 제어반 수수께끼</h3>
+        <p class="text-[11px] text-zinc-400 mb-3">4개의 스위치를 올바른 순서로 방출하십시오.</p>
+        <div class="grid grid-cols-4 gap-2 mb-4">
+          <button onclick="pressB1Switch(1)" class="py-3 bg-zinc-800 hover:bg-zinc-700 active:scale-95 border border-zinc-600 rounded text-sm font-mono-tech text-amber-300 font-bold">SW 1</button>
+          <button onclick="pressB1Switch(2)" class="py-3 bg-zinc-800 hover:bg-zinc-700 active:scale-95 border border-zinc-600 rounded text-sm font-mono-tech text-amber-300 font-bold">SW 2</button>
+          <button onclick="pressB1Switch(3)" class="py-3 bg-zinc-800 hover:bg-zinc-700 active:scale-95 border border-zinc-600 rounded text-sm font-mono-tech text-amber-300 font-bold">SW 3</button>
+          <button onclick="pressB1Switch(4)" class="py-3 bg-zinc-800 hover:bg-zinc-700 active:scale-95 border border-zinc-600 rounded text-sm font-mono-tech text-amber-300 font-bold">SW 4</button>
+        </div>
+        <div class="text-[11px] font-mono-tech text-zinc-300 mb-3">입력 순서: [ ${b1SwitchesState.join(' - ') || '대기 중'} ]</div>
+        <div class="flex space-x-2">
+          <button onclick="resetB1Puzzle()" class="w-1/2 py-1.5 bg-zinc-900 border border-zinc-700 rounded text-xs text-zinc-400">초기화</button>
+          <button onclick="closePuzzleModal()" class="w-1/2 py-1.5 bg-zinc-800 border border-zinc-600 rounded text-xs text-zinc-200">닫기</button>
+        </div>
+      `;
+    }
+
+    window.pressB1Switch = function(num) {
+      audio.playClick();
+      b1SwitchesState.push(num);
+      const card = document.getElementById('puzzle-card');
+      renderB1PuzzleUI(card);
+
+      const target = [3, 1, 4, 2];
+      if (b1SwitchesState.length === 4) {
+        if (b1SwitchesState.every((v, i) => v === target[i])) {
+          window.gameState.flags.b1RoomPuzzleSolved = true;
+          audio.playItemPickup();
+          setTimeout(() => {
+            openClueModal('수수께끼 해결!', '<span class="text-emerald-400 font-bold">[조건 1 달성 완료]</span><br>과전압 방출 회로가 성공적으로 연결되었습니다.');
+          }, 200);
+        } else {
+          setTimeout(() => {
+            b1SwitchesState = [];
+            renderB1PuzzleUI(card);
+            audio.playClick();
+          }, 350);
+        }
+      }
+    };
+
+    window.resetB1Puzzle = function() {
+      b1SwitchesState = [];
+      renderB1PuzzleUI(document.getElementById('puzzle-card'));
+    };
+
+    // B1_right Item
+    function handleB1RightLocker() {
+      if (!window.gameState.flags.b1RightLeverFound) {
+        window.gameState.flags.b1RightLeverFound = true;
+        addItem('비상 계단 레버', 'wrench', '계단 철문을 물리적으로 개방하는 무거운 레버');
+        audio.playItemPickup();
+        openClueModal('아이템 획득', '<span class="text-emerald-400 font-bold">[조건 2 달성 완료]</span><br>라커 안에서 [비상 계단 레버]를 발견했습니다.');
+      } else {
+        audio.playClick();
+      }
+    }
+
+    // library_boss Logic
+    function handleLibraryBossBook() {
+      window.gameState.flags.libraryBossClueFound = true;
+      audio.playClick();
+      openClueModal('책상 위 고서의 기록', '마지막 장에 붉은 잉크로 휘갈겨 쓴 글씨:<br><br><span class="text-amber-400 font-bold text-xs">"서재(library) 좌측 고서적 서가 가장 밑단 먼지 덮인 흑색 서적 뒤편에 탈출 열쇠가 있다."</span><br><br>단서가 해금되었습니다.');
+    }
+    function handleLibraryBossBookshelf() {
+      audio.playClick();
+    }
+
+    // library Logic
+    function handleLibrarySecretShelf() {
+      if (!window.gameState.flags.libraryBossClueFound) {
+        openClueModal('고서적 서가', '책들이 빼곡히 꽂혀 있습니다. 어떤 책을 확인해야 할지 단서가 필요합니다.');
+        return;
+      }
+      if (!window.gameState.flags.libraryKeyFound) {
+        window.gameState.flags.libraryKeyFound = true;
+        addItem('식당 열쇠', 'key', '식당으로 이어지는 견고한 황동 열쇠');
+        audio.playItemPickup();
+        openClueModal('열쇠 획득!', '집무실 단서대로 흑색 서적 뒤를 들추자 [식당 열쇠]가 나타났습니다.');
+      } else {
+        audio.playClick();
+      }
+    }
+    function handleLibraryDoor() {
+      if (!window.gameState.flags.libraryKeyFound) {
+        openClueModal('문이 잠겨 있음', '식당으로 통하는 문이 굳게 잠겨 있습니다. 열쇠가 필요합니다.');
+        return;
+      }
+      window.gameState.flags.libraryDoorOpen = true;
+      audio.playDoorOpen();
+      setTimeout(() => changeRoom('restaurant'), 300);
+    }
+
+    // restaurant Logic (Vending & Keypad)
+    function openVendingPuzzle() {
+      audio.playClick();
+      const modal = document.getElementById('puzzle-modal');
+      const card = document.getElementById('puzzle-card');
+      card.innerHTML = `
+        <h3 class="text-sm font-bold text-amber-400 mb-1 font-mono-tech">고장난 자판기</h3>
+        <p class="text-xs text-zinc-300 mb-3">반환 레버를 여러 번 돌리자 캔 음료 배출구에서 구겨진 영수증 종이가 툭 떨어집니다.</p>
+        <div class="p-3 bg-zinc-900 border border-dashed border-amber-600 rounded text-center mb-3">
+          <span class="text-zinc-400 text-[10px] block font-mono-tech">RECEIPT NO. 8419</span>
+          <span class="text-amber-400 text-lg font-bold font-mono-tech tracking-widest">PW: 8 4 1 9</span>
+        </div>
+        <button onclick="closePuzzleModal()" class="w-full py-2 bg-zinc-800 border border-zinc-600 rounded font-mono-tech text-xs text-zinc-200">닫기 (암호 확인)</button>
+      `;
+      modal.classList.remove('hidden');
+    }
+
+    let inputKeypadPw = '';
+    function openRestaurantKeypad() {
+      if (window.gameState.flags.restaurantDoorOpen) {
+        audio.playDoorOpen();
+        setTimeout(() => changeRoom('EXIT'), 300);
+        return;
+      }
+      inputKeypadPw = '';
+      const modal = document.getElementById('puzzle-modal');
+      const card = document.getElementById('puzzle-card');
+      renderKeypadUI(card);
+      modal.classList.remove('hidden');
+    }
+
+    function renderKeypadUI(card) {
+      card.innerHTML = `
+        <h3 class="text-sm font-bold text-red-500 mb-1 font-mono-tech">EXIT 보안 도어락</h3>
+        <div class="w-full py-2 bg-black border border-red-800 rounded font-mono-tech text-base text-red-400 tracking-widest text-center mb-3">
+          ${inputKeypadPw ? inputKeypadPw.padEnd(4, ' _ ') : '_ _ _ _'}
+        </div>
+        <div class="grid grid-cols-3 gap-1.5 mb-3 max-w-[200px] mx-auto">
+          ${[1,2,3,4,5,6,7,8,9].map(n => `
+            <button onclick="pressKeypadNum('${n}')" class="py-2.5 bg-zinc-800 hover:bg-zinc-700 active:scale-95 border border-zinc-700 rounded font-mono-tech text-sm text-zinc-200">${n}</button>
+          `).join('')}
+          <button onclick="clearKeypadNum()" class="py-2.5 bg-zinc-900 border border-zinc-700 rounded font-mono-tech text-xs text-zinc-400">C</button>
+          <button onclick="pressKeypadNum('0')" class="py-2.5 bg-zinc-800 hover:bg-zinc-700 active:scale-95 border border-zinc-700 rounded font-mono-tech text-sm text-zinc-200">0</button>
+          <button onclick="closePuzzleModal()" class="py-2.5 bg-zinc-900 border border-zinc-700 rounded font-mono-tech text-xs text-zinc-400">X</button>
+        </div>
+      `;
+    }
+
+    window.pressKeypadNum = function(n) {
+      audio.playClick();
+      if (inputKeypadPw.length < 4) inputKeypadPw += n;
+      renderKeypadUI(document.getElementById('puzzle-card'));
+
+      if (inputKeypadPw.length === 4) {
+        if (inputKeypadPw === '8419') {
+          window.gameState.flags.restaurantDoorOpen = true;
+          audio.playDoorOpen();
+          setTimeout(() => {
+            closePuzzleModal();
+            changeRoom('EXIT');
+          }, 300);
+        } else {
+          setTimeout(() => {
+            inputKeypadPw = '';
+            renderKeypadUI(document.getElementById('puzzle-card'));
+          }, 300);
+        }
+      }
+    };
+    window.clearKeypadNum = function() {
+      inputKeypadPw = '';
+      renderKeypadUI(document.getElementById('puzzle-card'));
+    };
+
+    // toilet & skibiditoilet Logic
+    function handleToiletFloorTile() {
+      if (!window.gameState.flags.toiletKeycardFound) {
+        window.gameState.flags.toiletKeycardFound = true;
+        addItem('EXIT 마스터 키카드', 'credit-card', 'EXIT 최종 탈출 도어 승인 키카드');
+        audio.playItemPickup();
+        openClueModal('키카드 발견!', '헐거워진 타일 바닥을 들추자 바닥 틈에서 <span class="text-amber-400 font-bold">[EXIT 마스터 키카드]</span>를 획득했습니다!');
+      } else {
+        audio.playClick();
+      }
+    }
+
+    function handleSkibidiToiletEvent() {
+      triggerSkibidiEvent();
+    }
+
+    // EXIT Logic
+    function handleExitFireCabinet() {
+      if (!window.gameState.flags.exitBreakerPulled) {
+        window.gameState.flags.exitBreakerPulled = true;
+        audio.playItemPickup();
+        openClueModal('비상 전원 스위치 ON', '소화전 비상 레버를 내렸습니다. EXIT 탈출구의 전원 락이 해제되었습니다.');
+      } else {
+        audio.playClick();
+      }
+    }
+
+    function handleFinalExitDoor() {
+      const pwr = window.gameState.flags.exitBreakerPulled;
+      const key = window.gameState.flags.toiletKeycardFound;
+
+      if (!pwr || !key) {
+        let msg = '비상 탈출구(EXIT)가 열리지 않습니다.<br><br>';
+        msg += pwr ? '<span class="text-emerald-400">[완료]</span> 소화전 비상 전원 해제<br>' : '<span class="text-red-400">[미달성]</span> 우측 소화전 비상 스위치 작동 필요<br>';
+        msg += key ? '<span class="text-emerald-400">[완료]</span> 화장실 마스터 키카드 소지<br>' : '<span class="text-red-400">[미달성]</span> toilet(화장실) 바닥에서 키카드 필요';
+        openClueModal('탈출 승인 거부', msg);
+        return;
+      }
+
+      window.gameState.isGameClear = true;
+      audio.playDoorOpen();
+      document.getElementById('gameclear-layer').classList.remove('hidden');
+    }
+  </script>
+
+  <script>
+    function triggerMonsterTrap(roomName) {
+      if (window.gameState.isJumpscarePlaying || window.gameState.isGameOver) return;
+      window.gameState.isJumpscarePlaying = true;
+      window.gameState.livesLost += 1;
+      updateLivesDisplay();
+
+      const ENTITY_SCREEN_TIME_MS = 1450;
+      audio.playJumpscare(ENTITY_SCREEN_TIME_MS / 1000);
+      if (navigator.vibrate) navigator.vibrate([120, 60, 240, 60, 480]);
+
+      const monsterFile = roomMonsters[roomName] || './B_ntt.png';
+      const jsImg = document.getElementById('jumpscare-img');
+      const jsLayer = document.getElementById('jumpscare-layer');
+      const container = document.getElementById('game-container');
+
+      jsImg.src = monsterFile;
+      jsImg.classList.remove('skibidi-active');
+      jsLayer.classList.remove('hidden');
+      container.classList.add('shake-active');
+
+      setTimeout(() => {
+        container.classList.remove('shake-active');
+        jsLayer.classList.add('hidden');
+        audio.stopJumpscare();
+        window.gameState.isJumpscarePlaying = false;
+
+        if (window.gameState.livesLost >= window.gameState.maxStrikes) {
+          triggerGameOver();
+        }
+      }, ENTITY_SCREEN_TIME_MS);
+    }
+
+    // 스키비디 토일렛 전용 점프스케어 (목숨 차감 X, 코믹 띠용 사운드)
+    function triggerSkibidiEvent() {
+      if (window.gameState.isJumpscarePlaying || window.gameState.isGameOver) return;
+      window.gameState.isJumpscarePlaying = true;
+
+      audio.playBoingSound();
+      if (navigator.vibrate) navigator.vibrate(80);
+
+      const jsImg = document.getElementById('jumpscare-img');
+      const jsLayer = document.getElementById('jumpscare-layer');
+      const container = document.getElementById('game-container');
+
+      jsImg.src = './skibidi_ntt.png';
+      jsImg.classList.add('skibidi-active');
+      jsLayer.classList.remove('hidden');
+
+      setTimeout(() => {
+        jsImg.classList.remove('skibidi-active');
+        jsLayer.classList.add('hidden');
+        window.gameState.isJumpscarePlaying = false;
+      }, 1200);
+    }
+
+    function updateLivesDisplay() {
+      const slots = document.querySelectorAll('.life-slot');
+      const dangerGlow = document.getElementById('danger-glow');
+      slots.forEach((slot, index) => {
+        if (index < window.gameState.livesLost) {
+          slot.className = 'life-slot w-5 h-5 rounded border border-red-500 bg-red-600 text-black font-bold flex items-center justify-center text-[10px] font-mono-tech animate-pulse';
+          slot.innerText = 'X';
+        } else {
+          slot.className = 'life-slot w-5 h-5 rounded border border-red-800 bg-red-950/60 flex items-center justify-center text-[10px] text-red-500 font-mono-tech';
+          slot.innerText = (index + 1);
+        }
+      });
+      dangerGlow.style.opacity = ((window.gameState.livesLost / window.gameState.maxStrikes) * 0.95).toString();
+    }
+
+    function triggerGameOver() {
+      window.gameState.isGameOver = true;
+      audio.playGameOver();
+      const goLayer = document.getElementById('gameover-layer');
+      goLayer.classList.remove('hidden');
+      goLayer.classList.add('flex');
+    }
+
+    function changeRoom(newRoom) {
+      if (!roomBackgrounds[newRoom]) return;
+      window.gameState.currentRoom = newRoom;
+
+      const diff = roomDifficultySettings[newRoom] || { idleThreshold: 12, label: '난이도: 보통' };
+      window.gameState.idleThresholdSeconds = diff.idleThreshold;
+
+      document.getElementById('current-location-text').innerText = `구역: ${newRoom} [${diff.label}]`;
+      document.getElementById('scene-bg').src = roomBackgrounds[newRoom];
+
+      updateRoomView();
+      resetIdleTimer();
+    }
+
+    function updateRoomView() {
+      const container = document.getElementById('hotspots-layer');
+      container.innerHTML = '';
+      const hotspots = roomHotspots[window.gameState.currentRoom] || [];
+
+      hotspots.forEach(spot => {
+        const div = document.createElement('div');
+        div.className = 'interactive-hotspot';
+        div.style.left = spot.rect.left;
+        div.style.top = spot.rect.top;
+        div.style.width = spot.rect.width;
+        div.style.height = spot.rect.height;
+
+        // 클릭 텍스트 툴팁 제거 (커서 반응 및 테두리 효과만 유지)
+        div.addEventListener('click', (e) => {
+          e.stopPropagation();
+          onHotspotClick(spot.action);
+        });
+        container.appendChild(div);
+      });
+    }
+
+    function resetIdleTimer() {
+      window.gameState.idleSeconds = 0;
+      const warning = document.getElementById('idle-warning');
+      if (warning) warning.classList.add('hidden');
+    }
+
+    function startIdleTracker() {
+      if (window.gameState.idleTimerInterval) clearInterval(window.gameState.idleTimerInterval);
+      window.gameState.idleTimerInterval = setInterval(() => {
+        if (window.gameState.isJumpscarePlaying || window.gameState.isGameOver || window.gameState.isGameClear) return;
+        window.gameState.idleSeconds += 1;
+        const warnTime = Math.max(3, Math.floor(window.gameState.idleThresholdSeconds * 0.6));
+        if (window.gameState.idleSeconds >= warnTime) {
+          document.getElementById('idle-warning').classList.remove('hidden');
+        } else {
+          document.getElementById('idle-warning').classList.add('hidden');
+        }
+      }, 1000);
+    }
+
+    function resetGame() {
+      window.gameState.currentRoom = 'B2';
+      window.gameState.livesLost = 0;
+      window.gameState.inventory = [];
+      window.gameState.isJumpscarePlaying = false;
+      window.gameState.isGameOver = false;
+      window.gameState.isGameClear = false;
+      window.gameState.idleSeconds = 0;
+      window.gameState.flags = {
+        b2PowerOn: false, b2DoorUnlocked: false, b1RoomPuzzleSolved: false,
+        b1RightLeverFound: false, b1BossDoorUnlocked: false, libraryBossClueFound: false,
+        libraryKeyFound: false, libraryDoorOpen: false, vendingMachineSolved: false,
+        restaurantDoorOpen: false, toiletKeycardFound: false, exitBreakerPulled: false
+      };
+
+      document.getElementById('gameover-layer').classList.add('hidden');
+      document.getElementById('gameover-layer').classList.remove('flex');
+      document.getElementById('gameclear-layer').classList.add('hidden');
+      document.getElementById('title-screen').classList.add('hidden');
+      document.getElementById('puzzle-modal').classList.add('hidden');
+
+      updateLivesDisplay();
+      renderInventory();
+      changeRoom('B2');
+      resetIdleTimer();
+      audio.startBGM();
+    }
+
+    window.onload = function () {
+      if (window.lucide) lucide.createIcons();
+      preloadAllImages();
+
+      document.getElementById('btn-start-game').addEventListener('click', () => {
+        audio.init();
+        audio.playClick();
+        resetGame();
+        startIdleTracker();
+      });
+
+      document.getElementById('btn-retry').addEventListener('click', () => {
+        audio.playClick();
+        resetGame();
+      });
+
+      document.getElementById('btn-main-menu').addEventListener('click', () => {
+        audio.playClick();
+        document.getElementById('gameover-layer').classList.add('hidden');
+        document.getElementById('gameover-layer').classList.remove('flex');
+        document.getElementById('title-screen').classList.remove('hidden');
+      });
+
+      document.getElementById('btn-clear-restart').addEventListener('click', () => resetGame());
+
+      document.getElementById('sound-toggle-btn').addEventListener('click', () => {
+        const isMuted = audio.toggleMute();
+        const icon = document.getElementById('sound-icon');
+        icon.setAttribute('data-lucide', isMuted ? 'volume-x' : 'volume-2');
+        if (window.lucide) lucide.createIcons();
+      });
+
+      document.getElementById('scene-viewport').addEventListener('click', (e) => {
+        if (e.target.closest('.interactive-hotspot') || e.target.closest('#puzzle-modal')) return;
+        if (window.gameState.idleSeconds >= window.gameState.idleThresholdSeconds) {
+          window.gameState.idleSeconds = 0;
+          resetIdleTimer();
+          triggerMonsterTrap(window.gameState.currentRoom);
+        } else {
+          audio.playClick();
+          resetIdleTimer();
+        }
+      });
+    };
+  </script>
+</body>
+</html>
