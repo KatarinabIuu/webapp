@@ -2,7 +2,7 @@
 <html lang="ko">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>THE ROOMS</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -10,20 +10,17 @@
   <link href="https://fonts.googleapis.com/css2?family=Creepster&family=Share+Tech+Mono&family=Noto+Sans+KR:wght@400;700;900&display=swap" rel="stylesheet">
 
   <style>
-    /* Prevent default gestures and rubber-banding on mobile browsers */
+    /* Base layout configuration */
     html, body {
       margin: 0;
       padding: 0;
       width: 100%;
       height: 100%;
-      height: 100dvh;
       overflow: hidden;
       background-color: #000000;
       font-family: 'Noto Sans KR', sans-serif;
       user-select: none;
       -webkit-user-select: none;
-      -webkit-touch-callout: none;
-      touch-action: manipulation;
       color: #e5e5e5;
     }
 
@@ -76,7 +73,7 @@
       background: rgba(255, 255, 255, 0.12);
     }
 
-    /* Persistent visible hotspot for room navigation (optimised for touch) */
+    /* Persistent visible hotspot for room navigation */
     .hotspot-nav {
       position: absolute;
       cursor: pointer;
@@ -107,50 +104,53 @@
       }
     }
 
-    /* Maintain 16:10 or 16:9 ratio while fitting nicely on both mobile portrait and desktop */
     #viewport-container {
       width: 100%;
-      height: 100%;
-      max-width: 100%;
-      max-height: 100%;
+      max-width: 1000px;
+      height: 100vh;
       display: flex;
       flex-direction: column;
       align-items: center;
-      justify-content: center;
+      justify-content: space-between;
     }
 
     #game-stage-wrapper {
       position: relative;
       width: 100%;
-      max-width: 1000px;
-      /* Responsive aspect box: fits either by width or height */
+      max-width: 960px;
       aspect-ratio: 16 / 10;
-      max-height: calc(100dvh - 90px);
       background-color: #000000;
       box-shadow: 0 0 35px rgba(0,0,0,0.9);
       border: 1px solid rgba(39, 39, 42, 0.6);
       overflow: hidden;
       margin: auto;
     }
-
-    /* Fallback on very tall mobile devices */
-    @media (max-aspect-ratio: 1/1) {
-      #game-stage-wrapper {
-        width: 100vw;
-        max-height: 62.5vw; /* 16:10 matching */
-        aspect-ratio: 16 / 10;
-      }
-    }
   </style>
 </head>
 
-<body class="flex flex-col items-center justify-between p-0 m-0 bg-black select-none">
-  <div id="viewport-container" class="relative w-full h-[100dvh] flex flex-col justify-between py-1 px-1 sm:px-4">
+<body class="flex flex-col items-center justify-between p-2 sm:p-4 bg-black select-none">
+  <div id="viewport-container" class="relative w-full max-w-5xl flex flex-col justify-between py-2">
     
-    <!-- Top HUD Navigation Header (Responsive Touch Safe) -->
-    <header class="relative z-30 w-full max-w-5xl flex items-center justify-between px-3 py-1.5 sm:px-4 sm:py-2 bg-gradient-to-b from-black/95 via-black/80 to-transparent">
-      <div class="flex items-center space-x-2 sm:space-x-3">
-        <span class="font-creep text-red-600 tracking-wider text-lg sm:text-2xl drop-shadow-[0_0_8px_rgba(220,38,38,0.8)]">THE ROOMS</span>
+    <!-- Top HUD Navigation Header -->
+    <header class="relative z-30 w-full flex items-center justify-between px-3 py-2 bg-gradient-to-b from-black/90 via-black/70 to-transparent">
+      <div class="flex items-center space-x-3">
+        <span class="font-creep text-red-600 tracking-wider text-xl sm:text-2xl drop-shadow-[0_0_8px_rgba(220,38,38,0.8)]">THE ROOMS</span>
+        <span id="current-location-text" class="text-xs font-mono-tech px-2 py-0.5 rounded bg-zinc-900/90 border border-zinc-700/60 text-zinc-300">구역: B2</span>
+      </div>
+
+      <!-- Threat Indicator (5 strikes = Game Over) -->
+      <div class="flex items-center space-x-2">
+        <span class="text-xs font-mono-tech text-zinc-400">THREAT</span>
+        <div id="lives-container" class="flex space-x-1.5">
+          <!-- Dynamically generated threat nodes -->
+        </div>
+      </div>
+    </header>
+
+    <!-- Main Game Aspect Stage Container -->
+    <div id="game-stage-wrapper" class="relative flex-1 flex items-center justify-center my-auto">
+      <!-- Interactive Scene Viewport Area -->
+      <main id="scene-interactive-area" class="relative w-full h-full overflow-hidden bg-black select-none">
         <span id="current-location-text" class="text-[11px] sm:text-xs font-mono-tech px-2 py-0.5 rounded bg-zinc-900/90 border border-zinc-700/60 text-zinc-300">구역: B2</span>
       </div>
 
@@ -193,15 +193,15 @@
       </main>
     </div>
 
-    <!-- Bottom Inventory Bar (Adaptive for Mobile Touch) -->
-    <footer class="relative z-30 w-full max-w-5xl flex items-center justify-between px-3 py-1.5 sm:px-4 sm:py-2 bg-gradient-to-t from-black via-zinc-950/95 to-transparent border-t border-zinc-900/60">
-      <div class="flex items-center space-x-2">
-        <span class="text-[11px] sm:text-xs font-mono-tech text-zinc-500">INVENTORY</span>
-        <div id="inventory-slots" class="flex space-x-1.5 sm:space-x-2">
+    <!-- Bottom Inventory Bar -->
+    <footer class="relative z-30 w-full flex items-center justify-between px-3 py-2 bg-gradient-to-t from-black via-zinc-950/90 to-transparent border-t border-zinc-900/60">
+      <div class="flex items-center space-x-3">
+        <span class="text-xs font-mono-tech text-zinc-500">INVENTORY</span>
+        <div id="inventory-slots" class="flex space-x-2">
           <!-- Dynamic 4-item inventory slot capacity -->
         </div>
       </div>
-      <div class="text-[10px] sm:text-[11px] font-mono-tech text-zinc-600 hidden xs:block">BEWARE OF THE SHADOWS</div>
+      <div class="text-[11px] font-mono-tech text-zinc-600">BEWARE OF THE SHADOWS</div>
     </footer>
 
     <!-- Game Over Screen Layer -->
