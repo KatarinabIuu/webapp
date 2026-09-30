@@ -46,14 +46,13 @@
     }
 
     /* Red alarm adrenaline strobe */
+    /* (광과민성 안전) 빠른 깜빡임 제거: 느리고 낮은 대비의 붉은 맥박 */
     @keyframes red-strobe {
-      0%, 100% { background-color: rgba(220, 20, 20, 0.55); }
-      25% { background-color: rgba(0, 0, 0, 0.95); }
-      50% { background-color: rgba(255, 0, 0, 0.75); }
-      75% { background-color: rgba(40, 0, 0, 0.9); }
+      0%, 100% { background-color: rgba(200, 20, 20, 0.50); }
+      50% { background-color: rgba(200, 20, 20, 0.62); }
     }
     .strobe-active {
-      animation: red-strobe 0.08s infinite !important;
+      animation: red-strobe 1.2s infinite ease-in-out !important;
     }
 
     /* Monster sudden lunge forward from shadows */
@@ -92,10 +91,10 @@
     /* Pulsing horror vignette */
     @keyframes pulse-vignette {
       0%, 100% { opacity: 0.75; }
-      50% { opacity: 0.98; }
+      50% { opacity: 0.9; }
     }
     .vignette-pulse {
-      animation: pulse-vignette 0.3s infinite alternate;
+      animation: pulse-vignette 1.2s infinite alternate ease-in-out;
     }
 
     /* Skibidi toilet popup animation */
@@ -1063,6 +1062,113 @@
   </script>
 
   <script>
+
+    /* =====================================================================
+       _ntt 이미지 점프스케어 연출 엔진 (requestAnimationFrame 기반)
+       - 등장: 0.14초 만에 어둠 속에서 화면 앞으로 확 튀어나옴 (밝기 플래시 포함)
+       - 이후: 30~60ms마다 위치/회전/크기/기울기를 무작위로 끊어서 튀게 만들어 '발작' 느낌
+       - 0.5초 안팎마다 더 강한 폭주 구간, 가끔 좌우 반전 / 색 반전 글리치
+       - 화면 전체도 같이 흔들림
+       ===================================================================== */
+    const nttFx = { raf: null, cleanup: null };
+
+    function stopNttFx() {
+      if (nttFx.raf) cancelAnimationFrame(nttFx.raf);
+      nttFx.raf = null;
+      if (nttFx.cleanup) nttFx.cleanup();
+      nttFx.cleanup = null;
+    }
+
+    function startNttFx(img, shakeTargets, opts) {
+      stopNttFx();
+      const o = Object.assign({ duration: 3000, power: 1, size: 1, shake: 1 }, opts || {});
+      if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+        o.power *= 0.4; o.shake = 0;
+      }
+      const rnd = (a) => (Math.random() * 2 - 1) * a;
+      const BASE_FILTER = 'brightness(1.25) contrast(1.35) drop-shadow(0 0 35px rgba(0,0,0,0.95))';
+      const LUNGE = 140;
+
+      let st = { x: 0, y: 0, r: 0, s: 1.4 * o.size, skew: 0, flip: 1 };
+      let nextJitter = 0, nextShake = 0;
+      let burstUntil = 0;
+      let nextBurst = 0;
+            let lastFilter = '';
+      let t0 = null;
+
+      img.style.transformOrigin = 'center center';
+      img.style.willChange = 'transform, filter, opacity';
+      // 첫 프레임 전에 원본 크기로 번쩍 보이는 것 방지
+      img.style.transform = 'scale(0.2)';
+      img.style.opacity = '0.3';
+
+      nttFx.cleanup = () => {
+        img.style.transform = '';
+        img.style.filter = '';
+        img.style.opacity = '';
+        img.style.willChange = '';
+        (shakeTargets || []).forEach(el => { if (el) el.style.transform = ''; });
+      };
+
+      function frame(now) {
+        if (t0 === null) {
+          t0 = now;
+          nextBurst = now + 450 + Math.random() * 300;
+        }
+        const t = now - t0;
+        if (t >= o.duration) { nttFx.raf = null; return; }
+
+        const P = o.power * (1 + (t / o.duration) * 0.5); // 시간이 갈수록 점점 더 발작
+        let transform, filter, opacity = 1;
+
+        if (t < LUNGE) {
+          // 1단계: 어둠 속에서 얼굴 앞으로 돌진
+          const p = t / LUNGE;
+          const e = 1 - Math.pow(1 - p, 3);
+          const sc = (0.2 + (1.5 * o.size - 0.2) * e).toFixed(3);
+          transform = `translate(0px, ${(90 * (1 - e)).toFixed(1)}px) rotate(${(-8 * (1 - e)).toFixed(2)}deg) scale(${sc})`;
+          filter = `brightness(${(0.6 + 0.65 * e).toFixed(2)}) contrast(1.3) blur(${(6 * (1 - e)).toFixed(1)}px)`;
+          opacity = 0.3 + 0.7 * e;
+        } else {
+          // 2단계: 발작
+          if (now >= nextBurst) {
+            burstUntil = now + 110 + Math.random() * 110;
+            nextBurst = now + 450 + Math.random() * 500;
+          }
+          if (now >= nextJitter) {
+            nextJitter = now + 30 + Math.random() * 30;
+            const burst = now < burstUntil;
+            const amp = (burst ? 75 : 34) * P;
+            st.x = rnd(amp);
+            st.y = rnd(amp * 0.8);
+            st.r = rnd((burst ? 13 : 6) * P);
+            st.s = ((burst ? 1.65 : 1.4) + Math.random() * 0.25 * P) * o.size;
+            st.skew = rnd(burst ? 9 : 3);
+            st.flip = 1;
+          }
+          transform = `translate(${st.x.toFixed(1)}px, ${st.y.toFixed(1)}px) rotate(${st.r.toFixed(2)}deg) skewX(${st.skew.toFixed(2)}deg) scale(${(st.s * st.flip).toFixed(3)}, ${st.s.toFixed(3)})`;
+
+          filter = BASE_FILTER; // 밝기/색은 고정 (깜빡임 없음)
+        }
+
+        img.style.transform = transform;
+        img.style.opacity = opacity;
+        if (filter !== lastFilter) { img.style.filter = filter; lastFilter = filter; }
+
+        // 화면 전체 흔들림
+        if (o.shake > 0 && now >= nextShake) {
+          nextShake = now + 30;
+          const a = 16 * P * o.shake;
+          const tr = `translate(${rnd(a).toFixed(1)}px, ${rnd(a).toFixed(1)}px) rotate(${rnd(1.4 * P * o.shake).toFixed(2)}deg) scale(1.05)`;
+          (shakeTargets || []).forEach(el => { if (el) el.style.transform = tr; });
+        }
+
+        nttFx.raf = requestAnimationFrame(frame);
+      }
+
+      nttFx.raf = requestAnimationFrame(frame);
+    }
+
     function triggerMonsterTrap(roomName) {
       if (window.gameState.isJumpscarePlaying || window.gameState.isGameOver) return;
       window.gameState.isJumpscarePlaying = true;
@@ -1088,17 +1194,12 @@
 
       jsImg.src = monsterFile;
       jsImg.classList.remove('skibidi-active');
-      jsImg.classList.add('monster-jumpscare-active');
+      startNttFx(jsImg, [stage, gameContainer], { duration: SCREEN_TIME_MS });
       jsLayer.classList.remove('hidden');
 
-      if (stage) stage.classList.add('shake-active');
-      if (gameContainer) gameContainer.classList.add('shake-active');
-
       setTimeout(() => {
-        if (stage) stage.classList.remove('shake-active');
-        if (gameContainer) gameContainer.classList.remove('shake-active');
+        stopNttFx();
         if (jsTint) jsTint.classList.remove('strobe-active');
-        jsImg.classList.remove('monster-jumpscare-active');
         jsLayer.classList.add('hidden');
         audio.stopJumpscare();
         window.gameState.isJumpscarePlaying = false;
@@ -1127,12 +1228,14 @@
       }
 
       jsImg.src = './skibidi_ntt.png';
-      jsImg.classList.remove('monster-jumpscare-active');
-      jsImg.classList.add('skibidi-active');
+      jsImg.classList.remove('skibidi-active');
+      startNttFx(jsImg,
+        [document.getElementById('scene-interactive-area'), document.getElementById('game-container')],
+        { duration: 1000, power: 0.9, size: 0.85, shake: 0.5 });
       jsLayer.classList.remove('hidden');
 
       setTimeout(() => {
-        jsImg.classList.remove('skibidi-active');
+        stopNttFx();
         jsLayer.classList.add('hidden');
         jsLayer.style.backgroundColor = '#000000';
         if (jsTint) jsTint.classList.remove('hidden');
