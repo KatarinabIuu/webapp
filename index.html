@@ -218,14 +218,16 @@
         this.activeJumpscare = null;
 
         this.sfxPaths = {
-          jumpscare: './SFX_Jumpscare.wav',
-          click: './SFX_Player_Click.wav',
-          door: './SFX_Player_DoorOpening.wav',
-          item: './SFX_Player_ItemPickup.wav'
-        };
-      }
+        jumpscare: './SFX_Jumpscare.wav',
+        click: './mouseClick.wav',
+        door: './SFX_Player_DoorOpening.wav',
+        item: './SFX_Player_ItemPickup.wav',
+        skibidi: './28. 화장실물내려가는소리.wav',
+        evilCrack: './Evil crack 03.wav'
+      };
+    }
 
-      init() {
+    init() {
         if (!this.ctx) {
           const AudioContext = window.AudioContext || window.webkitAudioContext;
           this.ctx = new AudioContext();
@@ -379,11 +381,15 @@
       }
 
       playClick() { this.playSound('click', 0.5); }
-      playItemPickup() { this.playSound('item', 0.7); }
-      playDoorOpen() { this.playSound('door', 0.75); }
+    playItemPickup() { this.playSound('item', 0.7); }
+    playDoorOpen() { this.playSound('door', 0.75); }
 
-      // 짧은 고전압 전원 인가 및 릴레이 작동 효과음 (텍스트 없이 기믹 완수 체감)
-      playPowerOnSound() {
+    playEvilCrack() {
+      this.playSound('evilCrack', 0.85);
+    }
+
+    // 짧은 고전압 전원 인가 및 릴레이 작동 효과음 (텍스트 없이 기믹 완수 체감)
+    playPowerOnSound() {
         if (this.muted || !this.ctx) return;
         try {
           const now = this.ctx.currentTime;
@@ -424,63 +430,53 @@
       }
 
       playJumpscare(targetDuration = 1.45) {
-        if (this.muted) return;
-        this.stopJumpscare();
-        try {
-          const sfx = new Audio(this.sfxPaths.jumpscare);
-          sfx.volume = 1.0;
-          this.activeJumpscare = sfx;
-          const applyRateAndPlay = () => {
-            if (sfx.duration && sfx.duration > 0) {
-              const calcRate = sfx.duration / targetDuration;
-              sfx.playbackRate = Math.min(Math.max(calcRate, 0.7), 3.0);
-            } else {
-              sfx.playbackRate = 1.35;
-            }
-            sfx.play().catch(() => {});
-          };
-          if (sfx.readyState >= 1) applyRateAndPlay();
-          else sfx.addEventListener('loadedmetadata', applyRateAndPlay, { once: true });
-        } catch (e) {}
-      }
+      if (this.muted) return;
+      this.stopJumpscare();
+      try {
+        const sfx = new Audio(this.sfxPaths.jumpscare);
+        sfx.volume = 1.0;
+        this.activeJumpscare = sfx;
+        const applyRateAndPlay = () => {
+          if (sfx.duration && sfx.duration > 0) {
+            const calcRate = sfx.duration / targetDuration;
+            sfx.playbackRate = Math.min(Math.max(calcRate, 0.7), 3.0);
+          } else {
+            sfx.playbackRate = 1.35;
+          }
+          sfx.play().catch(() => {});
+        };
+        if (sfx.readyState >= 1) applyRateAndPlay();
+        else sfx.addEventListener('loadedmetadata', applyRateAndPlay, { once: true });
+      } catch (e) {}
+    }
 
-      // 스키비디 토일렛 전용 코믹 '띠용' 효과음 (스프링 바이올린 합성음)
-      playBoingSound() {
-        if (this.muted || !this.ctx) return;
-        try {
-          const now = this.ctx.currentTime;
-          const osc = this.ctx.createOscillator();
-          const gain = this.ctx.createGain();
+    // 스키비디 토일렛 전용: '28. 화장실물내려가는소리.wav'를 1초에 맞춰 고속 배속 재생
+    playSkibidiFlush() {
+      if (this.muted) return;
+      try {
+        const sfx = new Audio(this.sfxPaths.skibidi);
+        sfx.volume = 0.9;
+        const targetDuration = 1.0;
+        const applyRateAndPlay = () => {
+          if (sfx.duration && sfx.duration > 0) {
+            sfx.playbackRate = Math.min(Math.max(sfx.duration / targetDuration, 1.0), 6.0);
+          } else {
+            sfx.playbackRate = 3.5;
+          }
+          sfx.play().catch(() => {});
+          setTimeout(() => {
+            try {
+              sfx.pause();
+              sfx.currentTime = 0;
+            } catch(e) {}
+          }, 1050);
+        };
+        if (sfx.readyState >= 1) applyRateAndPlay();
+        else sfx.addEventListener('loadedmetadata', applyRateAndPlay, { once: true });
+      } catch (e) {}
+    }
 
-          osc.type = 'sine';
-          // 150Hz에서 520Hz로 빠르게 튀어올랐다가 진동
-          osc.frequency.setValueAtTime(160, now);
-          osc.frequency.exponentialRampToValueAtTime(540, now + 0.18);
-          osc.frequency.exponentialRampToValueAtTime(320, now + 0.38);
-          osc.frequency.exponentialRampToValueAtTime(450, now + 0.55);
-
-          // 와우/피치 트레몰로
-          const wobble = this.ctx.createOscillator();
-          wobble.frequency.setValueAtTime(22, now);
-          const wobbleGain = this.ctx.createGain();
-          wobbleGain.gain.setValueAtTime(35, now);
-          wobble.connect(wobbleGain);
-          wobbleGain.connect(osc.frequency);
-
-          gain.gain.setValueAtTime(0.4, now);
-          gain.gain.exponentialRampToValueAtTime(0.01, now + 0.75);
-
-          osc.connect(gain);
-          gain.connect(this.ctx.destination);
-
-          wobble.start(now);
-          osc.start(now);
-          wobble.stop(now + 0.75);
-          osc.stop(now + 0.75);
-        } catch (e) {}
-      }
-
-      stopJumpscare() {
+    stopJumpscare() {
         if (this.activeJumpscare) {
           try {
             this.activeJumpscare.pause();
@@ -515,19 +511,20 @@
       });
     }
 
+    // 장시간 방치 기준: 최소 30초 이상으로 전면 상향 조정
     const roomDifficultySettings = {
-      'B2': { idleThreshold: 14, label: '난이도: 보통 (14초)' },
-      'B2_open': { idleThreshold: 13, label: '난이도: 보통 (13초)' },
-      'B1': { idleThreshold: 12, label: '난이도: 주의 (12초)' },
-      'B1_room': { idleThreshold: 11, label: '난이도: 주의 (11초)' },
-      'B1_right': { idleThreshold: 11, label: '난이도: 주의 (11초)' },
-      'library_boss': { idleThreshold: 10, label: '난이도: 위험 (10초)' },
-      'library': { idleThreshold: 10, label: '난이도: 위험 (10초)' },
-      'restaurant': { idleThreshold: 8, label: '난이도: 극위험 (8초)' },
-      'restaurant_toilet': { idleThreshold: 9, label: '난이도: 위험 (9초)' },
-      'toilet': { idleThreshold: 8, label: '난이도: 극위험 (8초)' },
-      'skibiditoilet': { idleThreshold: 15, label: '안전 구역 (15초)' },
-      'EXIT': { idleThreshold: 6, label: '난이도: 절체절명 (6초)' }
+      'B2': { idleThreshold: 45, label: '경계: 낮음 (45초)' },
+      'B2_open': { idleThreshold: 42, label: '경계: 낮음 (42초)' },
+      'B1': { idleThreshold: 40, label: '경계: 주의 (40초)' },
+      'B1_room': { idleThreshold: 38, label: '경계: 주의 (38초)' },
+      'B1_right': { idleThreshold: 38, label: '경계: 주의 (38초)' },
+      'library_boss': { idleThreshold: 36, label: '경계: 경고 (36초)' },
+      'library': { idleThreshold: 35, label: '경계: 경고 (35초)' },
+      'restaurant': { idleThreshold: 32, label: '경계: 위험 (32초)' },
+      'restaurant_toilet': { idleThreshold: 34, label: '경계: 주의 (34초)' },
+      'toilet': { idleThreshold: 32, label: '경계: 위험 (32초)' },
+      'skibiditoilet': { idleThreshold: 50, label: '안전 구역 (50초)' },
+      'EXIT': { idleThreshold: 30, label: '경계: 극위험 (최소 30초)' }
     };
 
     window.gameState = {
@@ -539,20 +536,21 @@
       isGameOver: false,
       isGameClear: false,
       idleSeconds: 0,
-      idleThresholdSeconds: 14,
+      idleThresholdSeconds: 45,
       idleTimerInterval: null,
       flags: {
         b2PowerOn: false,
         b2DoorUnlocked: false,
-        b1RoomPuzzleSolved: false,   // 조건 1: B1_room 수수께끼
-        b1RightLeverFound: false,    // 조건 2: B1_right 레버 획득
+        b1RoomPuzzleSolved: false,   // 조건 1: B1_room 전압 방정식
+        b1RightLeverFound: false,    // 조건 2: B1_right 라커 3자리 암호
         b1BossDoorUnlocked: false,
-        libraryBossClueFound: false, // library_boss 단서 열람
-        libraryKeyFound: false,      // library 탈출 열쇠
+        libraryBossClueFound: false,
+        libraryKeyFound: false,
         libraryDoorOpen: false,
-        vendingMachineSolved: false, // restaurant 자판기 비밀번호 해금
+        vendingMachineSolved: false, // restaurant 자판기 퀴즈
         restaurantDoorOpen: false,
-        toiletKeycardFound: false,   // toilet 최종 키카드
+        restaurantToiletSoundPlayed: false, // 식당->화장실통로 최초 1회 사운드 플래그
+        toiletKeycardFound: false,
         exitBreakerPulled: false
       }
     };
@@ -594,22 +592,22 @@
       'B2': [
         { id: 'b2-breaker', name: '벽면 고전압 배전함', rect: { left: '3%', top: '22%', width: '11%', height: '32%' }, action: () => handleB2Breaker() },
         { id: 'b2-boiler', name: '대형 온수 보일러 탱크', rect: { left: '23%', top: '35%', width: '13%', height: '38%' }, action: () => audio.playClick() },
-        { id: 'b2-vent', name: '어두운 환기 배관 덕트', rect: { left: '37%', top: '22%', width: '11%', height: '42%' }, action: () => triggerMonsterTrap('B2') },
-        { id: 'b2-door', name: '철제 이중문 (EXIT)', rect: { left: '60%', top: '35%', width: '14%', height: '26%' }, action: () => handleB2Door() }
+        { id: 'b2-vent', name: '어두운 환기 배관 덕트', rect: { left: '38%', top: '20%', width: '10%', height: '42%' }, action: () => triggerMonsterTrap('B2') },
+        { id: 'b2-door', name: '철제 이중문 (EXIT)', rect: { left: '60%', top: '34%', width: '14%', height: '26%' }, action: () => handleB2Door() }
       ],
 
       // 2. B2_open (문 열고 나온 통로)
       'B2_open': [
-        { id: 'b2o-stairs', name: 'B1 계단 (올라가기)', rect: { left: '32%', top: '25%', width: '15%', height: '50%' }, action: () => { audio.playDoorOpen(); setTimeout(() => changeRoom('B1'), 300); } },
+        { id: 'b2o-stairs', name: 'B1 계단 (올라가기)', rect: { left: '33%', top: '24%', width: '14%', height: '52%' }, action: () => { audio.playDoorOpen(); setTimeout(() => changeRoom('B1'), 300); } },
         { id: 'b2o-deep-hall', name: '오른쪽 깊숙한 통로 (B2로 복귀)', rect: { left: '52%', top: '40%', width: '7%', height: '20%' }, action: () => { audio.playDoorOpen(); setTimeout(() => changeRoom('B2'), 300); } },
-        { id: 'b2o-boiler', name: '우측 보일러 배관', rect: { left: '83%', top: '40%', width: '15%', height: '55%' }, action: () => audio.playClick() },
+        { id: 'b2o-boiler', name: '우측 보일러 배관', rect: { left: '83%', top: '38%', width: '15%', height: '58%' }, action: () => audio.playClick() },
         { id: 'b2o-fusebox', name: '배전반 점검', rect: { left: '66%', top: '32%', width: '11%', height: '36%' }, action: () => audio.playClick() }
       ],
 
       // 3. B1 (지하 1층 메인 홀)
       'B1': [
-        { id: 'b1-stairs-door', name: '왼쪽 계단 위 철문 (서재 집무실 연결통로)', rect: { left: '20%', top: '15%', width: '10%', height: '40%' }, action: () => handleB1BossDoor() },
-        { id: 'b1-room-door', name: '오른쪽 기계제어실 문 (B1_room)', rect: { left: '71%', top: '25%', width: '10%', height: '55%' }, action: () => { audio.playDoorOpen(); setTimeout(() => changeRoom('B1_room'), 300); } },
+        { id: 'b1-stairs-door', name: '왼쪽 계단 위 철문 (서재 집무실 연결통로)', rect: { left: '20%', top: '15%', width: '9%', height: '40%' }, action: () => handleB1BossDoor() },
+        { id: 'b1-room-door', name: '오른쪽 기계제어실 문 (B1_room)', rect: { left: '71%', top: '25%', width: '9%', height: '55%' }, action: () => { audio.playDoorOpen(); setTimeout(() => changeRoom('B1_room'), 300); } },
         { id: 'b1-deep-corridor', name: '더 안쪽 오른쪽 통로 (B1_right)', rect: { left: '54%', top: '39%', width: '6%', height: '20%' }, action: () => { audio.playDoorOpen(); setTimeout(() => changeRoom('B1_right'), 300); } },
         { id: 'b1-back-stairs', name: '뒤편 계단 (B2_open으로 내려가기)', rect: { left: '35%', top: '80%', width: '30%', height: '18%' }, action: () => { audio.playDoorOpen(); setTimeout(() => changeRoom('B2_open'), 300); } }
       ],
@@ -617,12 +615,12 @@
       // 4. B1_room (기계제어실 - 수수께끼)
       'B1_room': [
         { id: 'b1r-panels', name: '동력 제어반 수수께끼 풀기', rect: { left: '4%', top: '24%', width: '25%', height: '60%' }, action: () => openB1RoomPuzzle() },
-        { id: 'b1r-table', name: '작업대 메모 확인', rect: { left: '29%', top: '60%', width: '30%', height: '35%' }, action: () => openClueModal('작업대에 남겨진 엔지니어 메모', '동력 제어반 4개의 스위치 조합:<br><span class="text-amber-400 font-bold text-base">[ 3 - 1 - 4 - 2 ]</span> 순서로 과전압을 방출해야 격벽이 열린다.') },
+        { id: 'b1r-table', name: '작업대 메모 확인', rect: { left: '29%', top: '60%', width: '30%', height: '35%' }, action: () => openClueModal('작업대 엔지니어 다이어리', '동력 제어반 4구 과전압 방출 공식 메모:<br><br><span class="text-amber-400 font-mono text-xs">① 2번째 스위치: 가장 작은 소수(Prime) = ?<br>② 4번째 스위치: 2의 제곱 = ?<br>③ 1번째 스위치: 홀수 중 가장 작은 소수 = ?<br>④ 3번째 스위치: 남은 유일한 홀수 = ?</span><br><br><span class="text-zinc-400 text-[11px]">순서 [ 1번구 - 2번구 - 3번구 - 4번구 ] 의 숫자를 파악해 차례대로 방출하라.</span>') },
         { id: 'b1r-tank', name: '고압 압축 탱크 밸브', rect: { left: '68%', top: '23%', width: '13%', height: '50%' }, action: () => triggerMonsterTrap('B1_room') },
         { id: 'b1r-door', name: '출구 (B1 복도로 돌아가기)', rect: { left: '46%', top: '85%', width: '18%', height: '14%' }, action: () => { audio.playDoorOpen(); setTimeout(() => changeRoom('B1'), 300); } }
       ],
 
-      // 5. B1_right (창고 및 보관실 - 아이템)
+      // 5. B1_right (창고 및 보관실 - 아이템 수수께끼 라커)
       'B1_right': [
         { id: 'b1rt-lockers', name: '좌측 철제 라커함 (조사하기)', rect: { left: '9%', top: '35%', width: '22%', height: '58%' }, action: () => handleB1RightLocker() },
         { id: 'b1rt-shelves', name: '우측 정리 선반', rect: { left: '70%', top: '45%', width: '18%', height: '50%' }, action: () => audio.playClick() },
@@ -654,7 +652,7 @@
         { id: 'res-keypad-door', name: '비밀번호 잠금문 (EXIT 복도로 이동)', rect: { left: '35%', top: '33%', width: '9%', height: '28%' }, action: () => openRestaurantKeypad() },
         { id: 'res-kitchen', name: '어두운 주방 배식구 안쪽', rect: { left: '44%', top: '39%', width: '18%', height: '11%' }, action: () => triggerMonsterTrap('restaurant') },
         { id: 'res-trash', name: '음식물 잔반통', rect: { left: '41%', top: '48%', width: '6%', height: '14%' }, action: () => triggerMonsterTrap('restaurant') },
-        { id: 'res-right-space', name: '오른쪽 끝 남는 공간 (화장실 통로로 이동)', rect: { left: '88%', top: '30%', width: '12%', height: '65%' }, action: () => { audio.playDoorOpen(); setTimeout(() => changeRoom('restaurant_toilet'), 300); } },
+        { id: 'res-right-space', name: '오른쪽 끝 남는 공간 (화장실 통로로 이동)', rect: { left: '88%', top: '30%', width: '12%', height: '65%' }, action: () => handleGoToRestaurantToilet() },
         { id: 'res-back-library', name: '서재로 돌아가는 문', rect: { left: '0%', top: '80%', width: '15%', height: '20%' }, action: () => { audio.playDoorOpen(); setTimeout(() => changeRoom('library'), 300); } }
       ],
 
@@ -678,11 +676,12 @@
         { id: 'st-back-toilet', name: '화장실 홀로 돌아가기', rect: { left: '35%', top: '87%', width: '30%', height: '12%' }, action: () => { audio.playDoorOpen(); setTimeout(() => changeRoom('toilet'), 300); } }
       ],
 
-      // 12. EXIT (최종 탈출 복도)
+      // 12. EXIT (최종 탈출 복도 - 개선된 비상구 도어 정밀 히트박스)
       'EXIT': [
-        { id: 'ex-fire-cab', name: '소화전 비상 전원 함', rect: { left: '78%', top: '39%', width: '9%', height: '36%' }, action: () => handleExitFireCabinet() },
-        { id: 'ex-dark-corridor', name: '복도 끝 칠흑의 심연', rect: { left: '43%', top: '26%', width: '12%', height: '22%' }, action: () => triggerMonsterTrap('EXIT') },
-        { id: 'ex-final-door', name: '중앙 비상구 (EXIT 최종 탈출 도어)', rect: { left: '56%', top: '18%', width: '6%', height: '8%' }, action: () => handleFinalExitDoor() },
+        { id: 'ex-fire-cab', name: '소화전 비상 전원 함', rect: { left: '79%', top: '39%', width: '8%', height: '36%' }, action: () => handleExitFireCabinet() },
+        { id: 'ex-dark-corridor', name: '복도 끝 칠흑의 심연', rect: { left: '43%', top: '27%', width: '11%', height: '22%' }, action: () => triggerMonsterTrap('EXIT') },
+        // 복도 우측 EXIT 붉은 유도등 및 그 하단 도어 전체를 포괄하는 정밀 타깃
+        { id: 'ex-final-door', name: 'EXIT 비상 탈출구 문', rect: { left: '57%', top: '18%', width: '10%', height: '46%' }, action: () => handleFinalExitDoor() },
         { id: 'ex-back-res', name: '식당으로 돌아가기', rect: { left: '0%', top: '82%', width: '18%', height: '18%' }, action: () => { audio.playDoorOpen(); setTimeout(() => changeRoom('restaurant'), 300); } }
       ]
     };
@@ -751,15 +750,12 @@
       document.getElementById('puzzle-modal').classList.add('hidden');
     }
 
-    // B2 Logic
+    // B2 Logic: 배전함 올렸을 때만 전원음 1회, 문 열 때는 오직 문여는 소리만
     function handleB2Breaker() {
       if (!window.gameState.flags.b2PowerOn) {
         window.gameState.flags.b2PowerOn = true;
-        // 텍스트 창 없이 전원 공급 전자음 재생 -> 0.5초 뒤 문 개방 메커니즘 구동
+        // 전원 올렸을 때만 딱 한 번 전원음 출력 (모달 텍스트 없음)
         audio.playPowerOnSound();
-        setTimeout(() => {
-          audio.playDoorOpen();
-        }, 500);
       } else {
         audio.playClick();
       }
@@ -767,16 +763,13 @@
 
     function handleB2Door() {
       if (!window.gameState.flags.b2PowerOn) {
-        // 전원이 꺼져 있으면 짧은 잠김 클릭음만 출력 (텍스트창 없음)
+        // 전원이 꺼져 있으면 클릭음만
         audio.playClick();
         return;
       }
-      // 전원이 켜져 있으면 전원음 -> 0.5초 뒤 문 열림음과 함께 다음 맵으로 전환
-      audio.playPowerOnSound();
-      setTimeout(() => {
-        audio.playDoorOpen();
-        setTimeout(() => changeRoom('B2_open'), 400);
-      }, 500);
+      // 전원이 켜져 있으면 전원음 없이 오직 문 여는 소리만 나고 방 이동
+      audio.playDoorOpen();
+      setTimeout(() => changeRoom('B2_open'), 400);
     }
 
     // B1 & B1_room & B1_right Logic
@@ -785,9 +778,9 @@
       const cond2 = window.gameState.flags.b1RightLeverFound;
 
       if (!cond1 || !cond2) {
-        let msg = '서재 집무실로 통하는 계단 철문이 잠겨 있습니다.<br><br>';
-        msg += cond1 ? '<span class="text-emerald-400">[완료]</span> 기계제어실 동력 복구<br>' : '<span class="text-red-400">[미달성]</span> B1_room(기계실) 수수께끼 풀기<br>';
-        msg += cond2 ? '<span class="text-emerald-400">[완료]</span> 계단 비상 레버 소지<br>' : '<span class="text-red-400">[미달성]</span> B1_right(통로)에서 아이템 획득';
+        let msg = '서재 집무실로 통하는 계단 철문이 굳게 잠겨 있습니다.<br><br>';
+        msg += cond1 ? '<span class="text-emerald-400">[완료]</span> 기계제어실 동력 전압 수수께끼 해결<br>' : '<span class="text-red-400">[미달성]</span> B1_room(기계실) 전압 수수께끼 해결 필요<br>';
+        msg += cond2 ? '<span class="text-emerald-400">[완료]</span> 비상 계단 레버 소지<br>' : '<span class="text-red-400">[미달성]</span> B1_right(통로) 라커 암호 수수께끼 풀기';
         openClueModal('계단 철문 잠김', msg);
         return;
       }
@@ -797,11 +790,17 @@
       setTimeout(() => changeRoom('library_boss'), 300);
     }
 
-    // B1_room Puzzle Modal (Switches 3-1-4-2)
+    // B1_room Puzzle Modal (수식/수수께끼 기반 스위치 조합)
+    // 수수께끼 풀이:
+    // 1번구: 홀수 중 가장 작은 소수 = 3
+    // 2번구: 가장 작은 소수 = 2
+    // 3번구: 남은 유일한 홀수 = 1
+    // 4번구: 2의 제곱 = 4
+    // 입력 정답 순서: [ 3 - 2 - 1 - 4 ]
     let b1SwitchesState = [];
     function openB1RoomPuzzle() {
       if (window.gameState.flags.b1RoomPuzzleSolved) {
-        openClueModal('동력 제어반', '이미 과전압 방출 회로가 가동되어 조건 1이 클리어되었습니다.');
+        openClueModal('동력 제어반', '과전압 방출 회로가 이미 정상 가동되어 제어실 잠금이 해제되었습니다.');
         return;
       }
       b1SwitchesState = [];
@@ -813,15 +812,17 @@
 
     function renderB1PuzzleUI(card) {
       card.innerHTML = `
-        <h3 class="text-sm font-bold text-amber-400 mb-1 font-mono-tech">B1 동력 제어반 수수께끼</h3>
-        <p class="text-[11px] text-zinc-400 mb-3">4개의 스위치를 올바른 순서로 방출하십시오.</p>
+        <h3 class="text-sm font-bold text-amber-400 mb-1 font-mono-tech">B1 동력 제어반 전압 회로</h3>
+        <p class="text-[11px] text-zinc-300 mb-2 leading-relaxed">
+          작업대 메모의 수수께끼를 바탕으로 4개 스위치 번호를 올바른 순서로 방출하십시오.
+        </p>
         <div class="grid grid-cols-4 gap-2 mb-4">
           <button onclick="pressB1Switch(1)" class="py-3 bg-zinc-800 hover:bg-zinc-700 active:scale-95 border border-zinc-600 rounded text-sm font-mono-tech text-amber-300 font-bold">SW 1</button>
           <button onclick="pressB1Switch(2)" class="py-3 bg-zinc-800 hover:bg-zinc-700 active:scale-95 border border-zinc-600 rounded text-sm font-mono-tech text-amber-300 font-bold">SW 2</button>
           <button onclick="pressB1Switch(3)" class="py-3 bg-zinc-800 hover:bg-zinc-700 active:scale-95 border border-zinc-600 rounded text-sm font-mono-tech text-amber-300 font-bold">SW 3</button>
           <button onclick="pressB1Switch(4)" class="py-3 bg-zinc-800 hover:bg-zinc-700 active:scale-95 border border-zinc-600 rounded text-sm font-mono-tech text-amber-300 font-bold">SW 4</button>
         </div>
-        <div class="text-[11px] font-mono-tech text-zinc-300 mb-3">입력 순서: [ ${b1SwitchesState.join(' - ') || '대기 중'} ]</div>
+        <div class="text-[11px] font-mono-tech text-zinc-300 mb-3">방출 입력열: [ ${b1SwitchesState.join(' - ') || '대기 중'} ]</div>
         <div class="flex space-x-2">
           <button onclick="resetB1Puzzle()" class="w-1/2 py-1.5 bg-zinc-900 border border-zinc-700 rounded text-xs text-zinc-400">초기화</button>
           <button onclick="closePuzzleModal()" class="w-1/2 py-1.5 bg-zinc-800 border border-zinc-600 rounded text-xs text-zinc-200">닫기</button>
@@ -835,14 +836,14 @@
       const card = document.getElementById('puzzle-card');
       renderB1PuzzleUI(card);
 
-      const target = [3, 1, 4, 2];
+      const target = [3, 2, 1, 4];
       if (b1SwitchesState.length === 4) {
         if (b1SwitchesState.every((v, i) => v === target[i])) {
           window.gameState.flags.b1RoomPuzzleSolved = true;
-          audio.playItemPickup();
+          audio.playPowerOnSound();
           setTimeout(() => {
-            openClueModal('수수께끼 해결!', '<span class="text-emerald-400 font-bold">[조건 1 달성 완료]</span><br>과전압 방출 회로가 성공적으로 연결되었습니다.');
-          }, 200);
+            openClueModal('수수께끼 해결!', '<span class="text-emerald-400 font-bold">[조건 1 달성 완료]</span><br>전압 회로가 완벽히 결속되어 계단 전원 격벽이 해제되었습니다.');
+          }, 300);
         } else {
           setTimeout(() => {
             b1SwitchesState = [];
@@ -858,17 +859,67 @@
       renderB1PuzzleUI(document.getElementById('puzzle-card'));
     };
 
-    // B1_right Item
+    // B1_right Item Locker (다이얼 3자리 수수께끼)
+    // 수수께끼: "한 자릿수 완전제곱수 중 1이 아닌 가장 작은 수(4) - 다이얼의 중간(5) - 3의 2승(9)" -> 4 5 9
+    let b1LockerCode = '';
     function handleB1RightLocker() {
-      if (!window.gameState.flags.b1RightLeverFound) {
-        window.gameState.flags.b1RightLeverFound = true;
-        addItem('비상 계단 레버', 'wrench', '계단 철문을 물리적으로 개방하는 무거운 레버');
-        audio.playItemPickup();
-        openClueModal('아이템 획득', '<span class="text-emerald-400 font-bold">[조건 2 달성 완료]</span><br>라커 안에서 [비상 계단 레버]를 발견했습니다.');
-      } else {
+      if (window.gameState.flags.b1RightLeverFound) {
         audio.playClick();
+        return;
       }
+      b1LockerCode = '';
+      const modal = document.getElementById('puzzle-modal');
+      const card = document.getElementById('puzzle-card');
+      renderB1LockerUI(card);
+      modal.classList.remove('hidden');
     }
+
+    function renderB1LockerUI(card) {
+      card.innerHTML = `
+        <h3 class="text-sm font-bold text-amber-400 mb-1 font-mono-tech">라커 잠금 다이얼</h3>
+        <p class="text-[11px] text-zinc-300 mb-2 leading-relaxed">
+          녹슨 라커 손잡이 위에 긁힌 글귀:<br>
+          <span class="text-amber-300 font-mono text-xs">"1을 제외한 가장 작은 제곱수 / 0~9의 한가운데 / 3의 거듭제곱(3²)"</span>
+        </p>
+        <div class="w-full py-2 bg-black border border-amber-800 rounded font-mono text-base text-amber-400 tracking-widest text-center mb-3">
+          ${b1LockerCode ? b1LockerCode.padEnd(3, ' _ ') : '_ _ _'}
+        </div>
+        <div class="grid grid-cols-3 gap-1.5 mb-3 max-w-[200px] mx-auto">
+          ${[1,2,3,4,5,6,7,8,9].map(n => `
+            <button onclick="pressLockerNum('${n}')" class="py-2.5 bg-zinc-800 hover:bg-zinc-700 active:scale-95 border border-zinc-700 rounded font-mono text-sm text-zinc-200">${n}</button>
+          `).join('')}
+          <button onclick="clearLockerNum()" class="py-2.5 bg-zinc-900 border border-zinc-700 rounded font-mono text-xs text-zinc-400">C</button>
+          <button onclick="pressLockerNum('0')" class="py-2.5 bg-zinc-800 hover:bg-zinc-700 active:scale-95 border border-zinc-700 rounded font-mono text-sm text-zinc-200">0</button>
+          <button onclick="closePuzzleModal()" class="py-2.5 bg-zinc-900 border border-zinc-700 rounded font-mono text-xs text-zinc-400">닫기</button>
+        </div>
+      `;
+    }
+
+    window.pressLockerNum = function(n) {
+      audio.playClick();
+      if (b1LockerCode.length < 3) b1LockerCode += n;
+      renderB1LockerUI(document.getElementById('puzzle-card'));
+
+      if (b1LockerCode.length === 3) {
+        if (b1LockerCode === '459') {
+          window.gameState.flags.b1RightLeverFound = true;
+          addItem('비상 계단 레버', 'wrench', '계단 철문을 물리적으로 개방하는 무거운 레버');
+          audio.playItemPickup();
+          setTimeout(() => {
+            openClueModal('아이템 획득!', '<span class="text-emerald-400 font-bold">[조건 2 달성 완료]</span><br>철제 라커가 열리며 묵직한 [비상 계단 레버]를 손에 넣었습니다.');
+          }, 300);
+        } else {
+          setTimeout(() => {
+            b1LockerCode = '';
+            renderB1LockerUI(document.getElementById('puzzle-card'));
+          }, 350);
+        }
+      }
+    };
+    window.clearLockerNum = function() {
+      b1LockerCode = '';
+      renderB1LockerUI(document.getElementById('puzzle-card'));
+    };
 
     // library_boss Logic
     function handleLibraryBossBook() {
@@ -905,19 +956,28 @@
       setTimeout(() => changeRoom('restaurant'), 300);
     }
 
-    // restaurant Logic (Vending & Keypad)
+    // restaurant Logic (Vending 수수께끼 & Keypad)
+    // 수수께끼:
+    // "식당 개점 연도: 1980년대 후반"
+    // 수식: A = 7 x 8 = 56
+    // B = 100 - 63 = 37
+    // PW = A와 B를 합친 4자리 수: [ 5 6 3 7 ]
     function openVendingPuzzle() {
       audio.playClick();
       const modal = document.getElementById('puzzle-modal');
       const card = document.getElementById('puzzle-card');
       card.innerHTML = `
         <h3 class="text-sm font-bold text-amber-400 mb-1 font-mono-tech">고장난 자판기</h3>
-        <p class="text-xs text-zinc-300 mb-3">반환 레버를 여러 번 돌리자 캔 음료 배출구에서 구겨진 영수증 종이가 툭 떨어집니다.</p>
-        <div class="p-3 bg-zinc-900 border border-dashed border-amber-600 rounded text-center mb-3">
-          <span class="text-zinc-400 text-[10px] block font-mono-tech">RECEIPT NO. 8419</span>
-          <span class="text-amber-400 text-lg font-bold font-mono-tech tracking-widest">PW: 8 4 1 9</span>
+        <p class="text-xs text-zinc-300 mb-3 leading-relaxed">
+          반환 레버를 여러 번 돌리자 배출구에서 찢겨진 식당 재고 관리 수식 쪽지가 떨어집니다.
+        </p>
+        <div class="p-3 bg-zinc-900 border border-dashed border-amber-600 rounded text-left mb-3 font-mono text-[11px] text-zinc-300 leading-relaxed">
+          <span class="text-amber-400 font-bold block mb-1">■ EXIT 보안 도어락 4자리 조합식</span>
+          • 앞 2자리 (X) : 7 × 8 = ?<br>
+          • 뒤 2자리 (Y) : 100 - 63 = ?<br>
+          <span class="text-amber-300 font-bold block mt-1">➔ PW = [ X ][ Y ]</span>
         </div>
-        <button onclick="closePuzzleModal()" class="w-full py-2 bg-zinc-800 border border-zinc-600 rounded font-mono-tech text-xs text-zinc-200">닫기 (암호 확인)</button>
+        <button onclick="closePuzzleModal()" class="w-full py-2 bg-zinc-800 border border-zinc-600 rounded font-mono-tech text-xs text-zinc-200">닫기 (수식 확인)</button>
       `;
       modal.classList.remove('hidden');
     }
@@ -959,7 +1019,7 @@
       renderKeypadUI(document.getElementById('puzzle-card'));
 
       if (inputKeypadPw.length === 4) {
-        if (inputKeypadPw === '8419') {
+        if (inputKeypadPw === '5637') {
           window.gameState.flags.restaurantDoorOpen = true;
           audio.playDoorOpen();
           setTimeout(() => {
@@ -978,6 +1038,17 @@
       inputKeypadPw = '';
       renderKeypadUI(document.getElementById('puzzle-card'));
     };
+
+    // 식당에서 식당-화장실 통로로 넘어갈 때 최초 1회만 Evil crack 03.wav 재생
+    function handleGoToRestaurantToilet() {
+      if (!window.gameState.flags.restaurantToiletSoundPlayed) {
+        window.gameState.flags.restaurantToiletSoundPlayed = true;
+        audio.playEvilCrack();
+      } else {
+        audio.playDoorOpen();
+      }
+      setTimeout(() => changeRoom('restaurant_toilet'), 350);
+    }
 
     // toilet & skibiditoilet Logic
     function handleToiletFloorTile() {
@@ -1038,8 +1109,12 @@
       const monsterFile = roomMonsters[roomName] || './B_ntt.png';
       const jsImg = document.getElementById('jumpscare-img');
       const jsLayer = document.getElementById('jumpscare-layer');
+      const jsTint = document.getElementById('jumpscare-tint');
       const container = document.getElementById('game-container');
 
+      // 일반 괴물 점프스케어: 붉은 혈흔 및 검은 배경 정상 노출
+      jsLayer.style.backgroundColor = '#000000';
+      if (jsTint) jsTint.classList.remove('hidden');
       jsImg.src = monsterFile;
       jsImg.classList.remove('skibidi-active');
       jsLayer.classList.remove('hidden');
@@ -1057,17 +1132,25 @@
       }, ENTITY_SCREEN_TIME_MS);
     }
 
-    // 스키비디 토일렛 전용 점프스케어 (목숨 차감 X, 코믹 띠용 사운드)
+    // 스키비디 토일렛 전용:
+    // 1) 배경은 skibiditoilet.jpg 그대로 유지 (투명 오버레이)
+    // 2) 붉은색 혈흔/점프스케어 효과(jsTint) 제거
+    // 3) '28. 화장실물내려가는소리.wav'를 1초에 맞게 배속 재생
+    // 4) 목숨 차감 없음
     function triggerSkibidiEvent() {
       if (window.gameState.isJumpscarePlaying || window.gameState.isGameOver) return;
       window.gameState.isJumpscarePlaying = true;
 
-      audio.playBoingSound();
-      if (navigator.vibrate) navigator.vibrate(80);
+      audio.playSkibidiFlush();
+      if (navigator.vibrate) navigator.vibrate(60);
 
       const jsImg = document.getElementById('jumpscare-img');
       const jsLayer = document.getElementById('jumpscare-layer');
-      const container = document.getElementById('game-container');
+      const jsTint = document.getElementById('jumpscare-tint');
+
+      // 배경 투명화 및 붉은 이펙트 숨김
+      jsLayer.style.backgroundColor = 'transparent';
+      if (jsTint) jsTint.classList.add('hidden');
 
       jsImg.src = './skibidi_ntt.png';
       jsImg.classList.add('skibidi-active');
@@ -1076,8 +1159,11 @@
       setTimeout(() => {
         jsImg.classList.remove('skibidi-active');
         jsLayer.classList.add('hidden');
+        // 복구
+        jsLayer.style.backgroundColor = '#000000';
+        if (jsTint) jsTint.classList.remove('hidden');
         window.gameState.isJumpscarePlaying = false;
-      }, 1200);
+      }, 1000);
     }
 
     function updateLivesDisplay() {
@@ -1171,7 +1257,7 @@
         b2PowerOn: false, b2DoorUnlocked: false, b1RoomPuzzleSolved: false,
         b1RightLeverFound: false, b1BossDoorUnlocked: false, libraryBossClueFound: false,
         libraryKeyFound: false, libraryDoorOpen: false, vendingMachineSolved: false,
-        restaurantDoorOpen: false, toiletKeycardFound: false, exitBreakerPulled: false
+        restaurantDoorOpen: false, restaurantToiletSoundPlayed: false, toiletKeycardFound: false, exitBreakerPulled: false
       };
 
       document.getElementById('gameover-layer').classList.add('hidden');
