@@ -97,15 +97,32 @@
       animation: pulse-vignette 1.2s infinite alternate ease-in-out;
     }
 
-    /* Skibidi toilet popup animation */
-    @keyframes skibidi-rise {
-      0% { transform: translateY(80%) scale(0.4); opacity: 0; }
-      50% { transform: translateY(-8%) scale(1.15); opacity: 1; }
-      75% { transform: translateY(4%) scale(1.05); }
-      100% { transform: translateY(0%) scale(1.1); opacity: 1; }
+    /* 괴물 이미지: 게임 창 안에 꽉 차게(cover), 머리 쪽을 기준으로 클로즈업 */
+    .js-img-monster {
+      position: absolute; inset: 0;
+      width: 100%; height: 100%;
+      object-fit: cover;
+    }
+    /* 스키비디: 게임 창 중앙에 적당한 크기로 */
+    .js-img-skibidi {
+      position: relative;
+      width: auto; height: auto;
+      max-width: 55%; max-height: 70%;
+      object-fit: contain;
+    }
+
+    /* Skibidi: 점프스케어가 아닌 '띠용~' 탄성 팝업 (찌그러졌다 늘어나며 튕김) */
+    @keyframes skibidi-boing {
+      0%   { transform: translateY(40px) scale(0.2, 0.2); opacity: 0; }
+      20%  { transform: translateY(-10px) scale(0.85, 1.3); opacity: 1; }
+      40%  { transform: translateY(0) scale(1.25, 0.82); }
+      58%  { transform: translateY(-4px) scale(0.93, 1.1); }
+      76%  { transform: translateY(0) scale(1.05, 0.96); }
+      100% { transform: translateY(0) scale(1, 1); opacity: 1; }
     }
     .skibidi-active {
-      animation: skibidi-rise 0.35s cubic-bezier(0.18, 0.89, 0.32, 1.28) forwards;
+      animation: skibidi-boing 0.75s cubic-bezier(0.25, 0.8, 0.3, 1) forwards;
+      transform-origin: 50% 90%;
     }
 
     /* Hidden interactive object hotspot */
@@ -244,12 +261,12 @@
       </div>
     </div>
 
-  </div>
+    <!-- Jumpscare Overlay Layer: 게임 창 안에서 HUD/소지품 바 위를 전부 덮는 최상단 레이어 -->
+    <div id="jumpscare-layer" style="z-index: 9999;" class="absolute inset-0 hidden flex items-center justify-center pointer-events-none overflow-hidden bg-black">
+      <div id="jumpscare-tint" class="absolute inset-0 bg-[radial-gradient(circle,_transparent_30%,_rgba(180,0,0,0.85)_95%)] vignette-pulse"></div>
+      <img id="jumpscare-img" src="./B_ntt.png" alt="Entity" class="js-img-monster select-none filter contrast-125 brightness-110 drop-shadow-[0_0_35px_rgba(0,0,0,0.95)]">
+    </div>
 
-  <!-- Jumpscare Monster Display Overlay Layer (게임 UI 창 밖, 최상단 전체화면 레이어) -->
-  <div id="jumpscare-layer" style="z-index: 9999;" class="fixed inset-0 hidden flex items-center justify-center pointer-events-none overflow-hidden bg-black">
-    <div id="jumpscare-tint" class="absolute inset-0 bg-[radial-gradient(circle,_transparent_30%,_rgba(180,0,0,0.85)_95%)] vignette-pulse"></div>
-    <img id="jumpscare-img" src="./B_ntt.png" alt="Entity" class="relative max-w-[95%] max-h-[95%] object-contain select-none filter contrast-125 brightness-110 drop-shadow-[0_0_35px_rgba(0,0,0,0.95)]">
   </div>
 
   <script>
@@ -1081,7 +1098,7 @@
 
     function startNttFx(img, shakeTargets, opts) {
       stopNttFx();
-      const o = Object.assign({ duration: 3000, power: 1, size: 1, shake: 1 }, opts || {});
+      const o = Object.assign({ duration: 3000, power: 1, zoom: 1.25, shake: 1, focus: { x: 50, y: 15 } }, opts || {});
       if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
         o.power *= 0.4; o.shake = 0;
       }
@@ -1089,14 +1106,14 @@
       const BASE_FILTER = 'brightness(1.25) contrast(1.35) drop-shadow(0 0 35px rgba(0,0,0,0.95))';
       const LUNGE = 140;
 
-      let st = { x: 0, y: 0, r: 0, s: 1.4 * o.size, skew: 0, flip: 1 };
+      let st = { x: 0, y: 0, r: 0, s: o.zoom, skew: 0, flip: 1 };
       let nextJitter = 0, nextShake = 0;
       let burstUntil = 0;
       let nextBurst = 0;
             let lastFilter = '';
       let t0 = null;
 
-      img.style.transformOrigin = 'center center';
+      img.style.transformOrigin = `${o.focus.x}% ${o.focus.y}%`; // 머리 쪽을 기준으로 확대
       img.style.willChange = 'transform, filter, opacity';
       // 첫 프레임 전에 원본 크기로 번쩍 보이는 것 방지
       img.style.transform = 'scale(0.2)';
@@ -1125,7 +1142,7 @@
           // 1단계: 어둠 속에서 얼굴 앞으로 돌진
           const p = t / LUNGE;
           const e = 1 - Math.pow(1 - p, 3);
-          const sc = (0.2 + (1.5 * o.size - 0.2) * e).toFixed(3);
+          const sc = (0.2 + (o.zoom - 0.2) * e).toFixed(3);
           transform = `translate(0px, ${(90 * (1 - e)).toFixed(1)}px) rotate(${(-8 * (1 - e)).toFixed(2)}deg) scale(${sc})`;
           filter = `brightness(${(0.6 + 0.65 * e).toFixed(2)}) contrast(1.3) blur(${(6 * (1 - e)).toFixed(1)}px)`;
           opacity = 0.3 + 0.7 * e;
@@ -1138,12 +1155,12 @@
           if (now >= nextJitter) {
             nextJitter = now + 30 + Math.random() * 30;
             const burst = now < burstUntil;
-            const amp = (burst ? 75 : 34) * P;
+            const amp = (burst ? 24 : 10) * P;
             st.x = rnd(amp);
             st.y = rnd(amp * 0.8);
-            st.r = rnd((burst ? 13 : 6) * P);
-            st.s = ((burst ? 1.65 : 1.4) + Math.random() * 0.25 * P) * o.size;
-            st.skew = rnd(burst ? 9 : 3);
+            st.r = rnd((burst ? 5 : 2) * P);
+            st.s = o.zoom * (1 + (burst ? 0.07 : 0.025) + Math.random() * 0.04 * P);
+            st.skew = rnd(burst ? 3.5 : 1.2);
             st.flip = 1;
           }
           transform = `translate(${st.x.toFixed(1)}px, ${st.y.toFixed(1)}px) rotate(${st.r.toFixed(2)}deg) skewX(${st.skew.toFixed(2)}deg) scale(${(st.s * st.flip).toFixed(3)}, ${st.s.toFixed(3)})`;
@@ -1158,8 +1175,8 @@
         // 화면 전체 흔들림
         if (o.shake > 0 && now >= nextShake) {
           nextShake = now + 30;
-          const a = 16 * P * o.shake;
-          const tr = `translate(${rnd(a).toFixed(1)}px, ${rnd(a).toFixed(1)}px) rotate(${rnd(1.4 * P * o.shake).toFixed(2)}deg) scale(1.05)`;
+          const a = 6 * P * o.shake;
+          const tr = `translate(${rnd(a).toFixed(1)}px, ${rnd(a).toFixed(1)}px) rotate(${rnd(0.5 * P * o.shake).toFixed(2)}deg) scale(1.02)`;
           (shakeTargets || []).forEach(el => { if (el) el.style.transform = tr; });
         }
 
@@ -1168,6 +1185,16 @@
 
       nttFx.raf = requestAnimationFrame(frame);
     }
+
+    // 괴물별 클로즈업 기준점: x,y = 머리가 있는 위치(% , 이미지 좌상단 기준), zoom = 확대 배율
+    // 머리가 다른 위치에 있으면 여기 숫자만 바꾸면 됨
+    const NTT_FOCUS_DEFAULT = { x: 50, y: 15, zoom: 1.25 };
+    const nttFocus = {
+      './B_ntt.png':          { x: 50, y: 15, zoom: 1.25 },
+      './library_ntt.png':    { x: 50, y: 15, zoom: 1.25 },
+      './restaurant_ntt.png': { x: 50, y: 15, zoom: 1.25 },
+      './EXIT_ntt.png':       { x: 50, y: 15, zoom: 1.25 }
+    };
 
     function triggerMonsterTrap(roomName) {
       if (window.gameState.isJumpscarePlaying || window.gameState.isGameOver) return;
@@ -1192,9 +1219,12 @@
         jsTint.classList.add('strobe-active');
       }
 
+      const focus = nttFocus[monsterFile] || NTT_FOCUS_DEFAULT;
       jsImg.src = monsterFile;
-      jsImg.classList.remove('skibidi-active');
-      startNttFx(jsImg, [stage, gameContainer], { duration: SCREEN_TIME_MS });
+      jsImg.classList.remove('skibidi-active', 'js-img-skibidi');
+      jsImg.classList.add('js-img-monster');
+      jsImg.style.objectPosition = `${focus.x}% ${focus.y}%`;
+      startNttFx(jsImg, [stage, gameContainer], { duration: SCREEN_TIME_MS, zoom: focus.zoom, focus: focus });
       jsLayer.classList.remove('hidden');
 
       setTimeout(() => {
@@ -1228,19 +1258,21 @@
       }
 
       jsImg.src = './skibidi_ntt.png';
-      jsImg.classList.remove('skibidi-active');
-      startNttFx(jsImg,
-        [document.getElementById('scene-interactive-area'), document.getElementById('game-container')],
-        { duration: 1000, power: 0.9, size: 0.85, shake: 0.5 });
+      jsImg.style.objectPosition = '';
+      jsImg.classList.remove('js-img-monster', 'skibidi-active');
+      jsImg.classList.add('js-img-skibidi');
+      void jsImg.offsetWidth; // 애니메이션 재시작
+      jsImg.classList.add('skibidi-active');
       jsLayer.classList.remove('hidden');
 
       setTimeout(() => {
-        stopNttFx();
+        jsImg.classList.remove('skibidi-active', 'js-img-skibidi');
+        jsImg.classList.add('js-img-monster');
         jsLayer.classList.add('hidden');
         jsLayer.style.backgroundColor = '#000000';
         if (jsTint) jsTint.classList.remove('hidden');
         window.gameState.isJumpscarePlaying = false;
-      }, 1000);
+      }, 1300);
     }
 
     function updateLivesDisplay() {
