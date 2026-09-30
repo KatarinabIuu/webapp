@@ -27,18 +27,66 @@
     .font-creep { font-family: 'Creepster', cursive; }
     .font-mono-tech { font-family: 'Share Tech Mono', monospace; }
 
-    /* Shake animation during jumpscare */
-    @keyframes violent-shake {
-      0% { transform: translate(0, 0) scale(1.02); }
-      15% { transform: translate(-14px, 12px) scale(1.07); }
-      30% { transform: translate(16px, -14px) scale(1.09); }
-      45% { transform: translate(-18px, -10px) scale(1.06); }
-      60% { transform: translate(14px, 16px) scale(1.08); }
-      75% { transform: translate(-12px, 8px) scale(1.04); }
-      100% { transform: translate(0, 0) scale(1); }
+    /* Violent camera & screen shudder during jumpscare */
+    @keyframes camera-violent-shake {
+      0% { transform: translate(0, 0) rotate(0deg) scale(1.03); }
+      10% { transform: translate(-22px, 16px) rotate(-2deg) scale(1.08); }
+      20% { transform: translate(25px, -20px) rotate(2.2deg) scale(1.1); }
+      30% { transform: translate(-28px, -14px) rotate(-2.5deg) scale(1.06); }
+      40% { transform: translate(22px, 24px) rotate(2deg) scale(1.11); }
+      50% { transform: translate(-24px, 18px) rotate(-1.5deg) scale(1.07); }
+      60% { transform: translate(26px, -18px) rotate(2.5deg) scale(1.12); }
+      70% { transform: translate(-18px, -24px) rotate(-2deg) scale(1.08); }
+      80% { transform: translate(22px, 16px) rotate(1.8deg) scale(1.09); }
+      90% { transform: translate(-16px, 12px) rotate(-1.2deg) scale(1.05); }
+      100% { transform: translate(0, 0) rotate(0deg) scale(1); }
     }
     .shake-active {
-      animation: violent-shake 0.12s infinite;
+      animation: camera-violent-shake 0.07s infinite !important;
+    }
+
+    /* Red alarm adrenaline strobe */
+    @keyframes red-strobe {
+      0%, 100% { background-color: rgba(220, 20, 20, 0.55); }
+      25% { background-color: rgba(0, 0, 0, 0.95); }
+      50% { background-color: rgba(255, 0, 0, 0.75); }
+      75% { background-color: rgba(40, 0, 0, 0.9); }
+    }
+    .strobe-active {
+      animation: red-strobe 0.08s infinite !important;
+    }
+
+    /* Monster sudden lunge forward from shadows */
+    @keyframes monster-lunge-entry {
+      0% {
+        transform: scale(0.22) translateY(90px) rotate(-8deg);
+        opacity: 0.2;
+        filter: brightness(0.2) contrast(200%) blur(8px);
+      }
+      100% {
+        transform: scale(1.36) translateY(0) rotate(0deg);
+        opacity: 1;
+        filter: brightness(1.25) contrast(135%) blur(0px);
+      }
+    }
+
+    /* Frantic thrashing and roaring right in front of player's face */
+    @keyframes monster-violent-spasm {
+      0% { transform: scale(1.36) translate(0, 0) rotate(0deg); }
+      15% { transform: scale(1.48) translate(-26px, 18px) rotate(5deg); }
+      30% { transform: scale(1.3) translate(28px, -22px) rotate(-6deg); }
+      45% { transform: scale(1.5) translate(-20px, -20px) rotate(4deg); }
+      60% { transform: scale(1.32) translate(26px, 24px) rotate(-5deg); }
+      75% { transform: scale(1.47) translate(-28px, 16px) rotate(6deg); }
+      90% { transform: scale(1.34) translate(20px, -18px) rotate(-4deg); }
+      100% { transform: scale(1.4) translate(0, 0) rotate(0deg); }
+    }
+
+    .monster-jumpscare-active {
+      animation: monster-lunge-entry 0.09s cubic-bezier(0.12, 0.95, 0.22, 1.35) forwards,
+                 monster-violent-spasm 0.075s 0.09s infinite !important;
+      transform-origin: center center;
+      will-change: transform, filter;
     }
 
     /* Pulsing horror vignette */
@@ -1029,17 +1077,28 @@
       const jsImg = document.getElementById('jumpscare-img');
       const jsLayer = document.getElementById('jumpscare-layer');
       const jsTint = document.getElementById('jumpscare-tint');
-      const container = document.getElementById('game-stage-wrapper');
+      const stage = document.getElementById('scene-interactive-area');
+      const gameContainer = document.getElementById('game-container');
 
       jsLayer.style.backgroundColor = '#000000';
-      if (jsTint) jsTint.classList.remove('hidden');
+      if (jsTint) {
+        jsTint.classList.remove('hidden');
+        jsTint.classList.add('strobe-active');
+      }
+
       jsImg.src = monsterFile;
       jsImg.classList.remove('skibidi-active');
+      jsImg.classList.add('monster-jumpscare-active');
       jsLayer.classList.remove('hidden');
-      if (container) container.classList.add('shake-active');
+
+      if (stage) stage.classList.add('shake-active');
+      if (gameContainer) gameContainer.classList.add('shake-active');
 
       setTimeout(() => {
-        if (container) container.classList.remove('shake-active');
+        if (stage) stage.classList.remove('shake-active');
+        if (gameContainer) gameContainer.classList.remove('shake-active');
+        if (jsTint) jsTint.classList.remove('strobe-active');
+        jsImg.classList.remove('monster-jumpscare-active');
         jsLayer.classList.add('hidden');
         audio.stopJumpscare();
         window.gameState.isJumpscarePlaying = false;
@@ -1062,9 +1121,13 @@
       const jsTint = document.getElementById('jumpscare-tint');
 
       jsLayer.style.backgroundColor = 'transparent';
-      if (jsTint) jsTint.classList.add('hidden');
+      if (jsTint) {
+        jsTint.classList.remove('strobe-active');
+        jsTint.classList.add('hidden');
+      }
 
       jsImg.src = './skibidi_ntt.png';
+      jsImg.classList.remove('monster-jumpscare-active');
       jsImg.classList.add('skibidi-active');
       jsLayer.classList.remove('hidden');
 
