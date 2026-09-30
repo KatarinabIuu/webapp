@@ -195,12 +195,6 @@
         <!-- Dynamic Hotspot Targets Layer -->
         <div id="hotspots-container" class="absolute inset-0 z-20 pointer-events-auto"></div>
 
-        <!-- Jumpscare Monster Display Overlay Layer -->
-        <div id="jumpscare-layer" class="absolute inset-0 z-50 hidden flex items-center justify-center pointer-events-none overflow-hidden bg-black">
-          <div id="jumpscare-tint" class="absolute inset-0 bg-[radial-gradient(circle,_transparent_30%,_rgba(180,0,0,0.85)_95%)] vignette-pulse"></div>
-          <img id="jumpscare-img" src="./B_ntt.png" alt="Entity" class="relative max-w-[95%] max-h-[95%] object-contain select-none filter contrast-125 brightness-110 drop-shadow-[0_0_35px_rgba(0,0,0,0.95)]">
-        </div>
-
         <!-- Puzzle Modal -->
         <div id="puzzle-modal" class="absolute inset-0 z-40 bg-black/80 backdrop-blur-sm hidden flex items-center justify-center p-4">
           <div id="puzzle-card" class="bg-neutral-900 border border-neutral-700 rounded-lg p-5 max-w-sm w-full text-center shadow-2xl relative">
@@ -250,6 +244,12 @@
       </div>
     </div>
 
+  </div>
+
+  <!-- Jumpscare Monster Display Overlay Layer (게임 UI 창 밖, 최상단 전체화면 레이어) -->
+  <div id="jumpscare-layer" style="z-index: 9999;" class="fixed inset-0 hidden flex items-center justify-center pointer-events-none overflow-hidden bg-black">
+    <div id="jumpscare-tint" class="absolute inset-0 bg-[radial-gradient(circle,_transparent_30%,_rgba(180,0,0,0.85)_95%)] vignette-pulse"></div>
+    <img id="jumpscare-img" src="./B_ntt.png" alt="Entity" class="relative max-w-[95%] max-h-[95%] object-contain select-none filter contrast-125 brightness-110 drop-shadow-[0_0_35px_rgba(0,0,0,0.95)]">
   </div>
 
   <script>
